@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.python-version
+abc.txt
+sys.pdf
+sys.png
+tool-outputs/

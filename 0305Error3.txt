@@ -1,0 +1,279 @@
+
+[     UTC     ] Logs for psx-ai-mtt.streamlit.app/
+────────────────────────────────────────────────────────────────────────────────────────
+[11:49:45] 🚀 Starting up repository: 'psx-ai-analyzer', branch: 'main', main module: 'app.py'
+[11:49:45] 🐙 Cloning repository...
+[11:49:45] 🐙 Cloning into '/mount/src/psx-ai-analyzer'...
+
+[11:49:45] 🐙 Cloned repository!
+[11:49:45] 🐙 Pulling code changes from Github...
+[11:49:45] 📦 Processing dependencies...
+
+──────────────────────────────────────── uv ───────────────────────────────────────────
+
+Using uv pip install.
+Using Python 3.12.13 environment at /home/adminuser/venv
+Resolved 79 packages in 654ms
+Prepared 79 packages in 2.82s
+Installed 79 packages in 991ms
+ + altair==6.1.0
+ + annotated-types==0.7.0
+ + anyio==4.13.0
+ + attrs==26.1.0
+ + beautifulsoup4==4.14.3
+ + blinker==1.9.0
+ + cachetools==7.1.0
+ + certifi==2026.4.22
+ + cffi==2.0.0
+ + charset-normalizer==3.4.7
+ + click==8.3.3
+ + cryptography==47.0.0
+ + curl-cffi==0.15.0
+ + diskcache==5.6.3
+ + distro==1.9.0
+ + frozendict==2.4.7
+ + gitdb==4.0.12
+ + gitpython==3.1.49
+ + google-auth==2.50.0
+ + google-genai==1.74.0[2026-05-03 11:49:50.638187] 
+ + h11==0.16.0
+ + httpcore==1.0.9
+ + httptools==0.7.1
+ + httpx==0.28.1
+ + idna==3.13
+ + itsdangerous==2.2.0
+ + jinja2==3.1.6
+ + jsonschema==4.26.0[2026-05-03 11:49:50.638401] 
+ + jsonschema-specifications==2025.9.1
+ + llvmlite==0.44.0
+ + lxml==6.1.0
+ + markdown-it-py==4.0.0
+ + markupsafe==3.0.3
+ + mdurl==0.1.2
+ + multitasking==0.0.13
+ + narwhals==2.20.0
+ + numba==0.61.2
+ + numpy==2.2.6
+ + packaging==26.2
+ + pandas==3.0.2
+ + pandas-ta==0.4.71b0
+ + peewee==4.0.5
+ + pillow==12.2.0
+ + platformdirs==4.9.6
+ + plotly==6.7.0
+ + protobuf==7.34.1
+ + psxdata==0.1.0a3
+ + pyarrow==24.0.0
+ + pyasn1==0.6.3
+ + pyasn1-modules==0.4.2
+ + pycparser==3.0
+ + pydantic==2.13.3
+ + pydantic-core==2.46.3
+ + pydeck==0.9.2
+ + pygments==2.20.0
+ + python-dateutil==2.9.0.post0
+ + python-dotenv==1.2.2
+ + python-multipart==0.0.27
+ + pytz==2026.1.post1
+ + referencing==0.37.0
+ + requests==2.33.1
+ + rich==15.0.0
+ + rpds-py==0.30.0
+ + six==1.17.0
+ + smmap==5.0.3
+ + sniffio==1.3.1
+ + soupsieve==2.8.3
+ + starlette==1.0.0
+ + streamlit[2026-05-03 11:49:50.638866] ==1.57.0
+ + tenacity==9.1.4
+ + toml==0.10.2
+ + tqdm==4.67.3
+ + typing-extensions==4.15.0
+ + typing-inspection==0.4.2
+ + urllib3==2.6.3
+ + uvicorn==0.46.0
+ [2026-05-03 11:49:50.639357] + watchdog==6.0.0
+ + websockets==16.0
+ + yfinance==1.3.0
+Checking if Streamlit is installed
+Found Streamlit version 1.57.0 in the environment
+Installing rich for an improved exception logging
+Using uv pip install.
+Using Python 3.12.13 environment at /home/adminuser/venv
+Audited 1 package in 2ms
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+[11:49:52] 🐍 Python dependencies were installed from /mount/src/psx-ai-analyzer/requirements.txt using uv.
+Check if streamlit is installed
+Streamlit is already installed
+[11:49:54] 📦 Processed dependencies!
+2026-05-03 11:49:55.666 Uvicorn server started on 0.0.0.0:8501
+
+
+
+OHLC constraint violated in 1 row(s) — flagged
+Dates are not in chronological order
+2026-05-03 11:50:31.220 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+[12:01:09] 🐙 Pulling code changes from Github...
+[12:01:09] 📦 Processing dependencies...
+[12:01:09] 📦 Processed dependencies!
+[12:01:11] 🔄 Updated app!
+OHLC constraint violated in 3 row(s) — flagged
+Dates are not in chronological order
+2026-05-03 12:02:01.098 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+[12:11:44] 🐙 Pulling code changes from Github...
+[12:11:44] 📦 Processing dependencies...
+
+──────────────────────────────────────── uv ───────────────────────────────────────────
+
+Using uv pip install.
+Using Python 3.12.13 environment at /home/adminuser/venv
+Resolved [2026-05-03 12:11:45.620065] 79 packages in 374ms
+Audited [2026-05-03 12:11:45.622497] 79 packages[2026-05-03 12:11:45.622908]  [2026-05-03 12:11:45.623451] in 0.18ms[2026-05-03 12:11:45.623962] 
+Checking if Streamlit is installed
+Found Streamlit version 1.57.0 in the environment
+Installing rich for an improved exception logging
+Using uv pip install.
+Using Python 3.12.13 environment at /home/adminuser/venv
+Audited 1 package in 13ms
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+[12:11:47] 🐍 Python dependencies were installed from /mount/src/psx-ai-analyzer/requirements.txt using uv.
+[12:11:47] 📦 Processed dependencies!
+  Stopping...
+2026-05-03 12:11:52.062 Uvicorn server started on 0.0.0.0:8501
+
+
+
+[12:11:53] 🔄 Updated app!
+[12:15:38] 🐙 Pulling code changes from Github...
+[12:15:38] 📦 Processing dependencies...
+[12:15:38] 📦 Processed dependencies!
+[12:15:40] 🔄 Updated app!
+Dates are not in chronological order
+2026-05-03 12:16:44.300 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+OHLC constraint violated in 2 row(s) — flagged
+Dates are not in chronological order
+2026-05-03 12:23:28.754 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+[12:23:53] 🐙 Pulling code changes from Github...
+[12:23:53] 📦 Processing dependencies...
+[12:23:53] 📦 Processed dependencies!
+[12:23:54] 🔄 Updated app!
+OHLC constraint violated in 3 row(s) — flagged
+Dates are not in chronological order
+2026-05-03 12:25:09.018 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.12/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.12/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:689 in code_to_exec                                     
+                                                                                
+  /mount/src/psx-ai-analyzer/app.py:188 in <module>                             
+                                                                                
+    185 │   │   │                                                               
+    186 │   │   │   ai_data_string = f"Co: {full_name}, P: {current_price}, RS  
+    187 │   │   │   report = analyze_with_ai(symbol, timeframe, ai_data_string  
+  ❱ 188 │   │   │   st.markdown(f"<div style='background-color:{bg_color}; col  
+    189 │   │   │                                                               
+    190 │   │   │   # Data Tables                                               
+    191 │   │   │   st.divider()                                                
+────────────────────────────────────────────────────────────────────────────────
+NameError: name 'bg_color' is not defined
+[12:28:46] 🐙 Pulling code changes from Github...
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.12/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.12/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:689 in code_to_exec                                     
+                                                                                
+  /mount/src/psx-ai-analyzer/app.py:4 in <module>                               
+                                                                                
+      1 import streamlit as st                                                  
+      2 import pandas as pd                                                     
+      3 import plotly.graph_objects as go                                       
+  ❱   4 from indicators import get_psx_data, calculate_indicators, get_live_pr  
+      5 from ai_engine import analyze_with_ai                                   
+      6 import datetime                                                         
+      7                                                                         
+  in _find_and_load:1360                                                        
+  in _find_and_load_unlocked:1331                                               
+  in _load_unlocked:946                                                         
+────────────────────────────────────────────────────────────────────────────────
+KeyError: 'indicators'
+[12:28:47] 📦 Processing dependencies...
+[12:28:47] 📦 Processed dependencies!
+[12:28:48] 🔄 Updated app!
+OHLC constraint violated in 3 row(s) — flagged
+Dates are not in chronological order
+2026-05-03 12:30:40.374 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.12/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.12/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:689 in code_to_exec                                     
+                                                                                
+  /mount/src/psx-ai-analyzer/app.py:190 in <module>                             
+                                                                                
+    187 │   │   │                                                               
+    188 │   │   │   ai_data_string = f"Co: {full_name}, P: {current_price}, RS  
+    189 │   │   │   report = analyze_with_ai(symbol, timeframe, ai_data_string  
+  ❱ 190 │   │   │   st.markdown(f"<div style='background-color:{bg_color}; col  
+    191 │   │   │                                                               
+    192 │   │   │   # Data Tables                                               
+    193 │   │   │   st.divider()                                                
+────────────────────────────────────────────────────────────────────────────────
+NameError: name 'bg_color' is not defined
+OHLC constraint violated in 2 row(s) — flagged
+Dates are not in chronological order
+2026-05-03 12:31:35.748 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.12/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.12/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:689 in code_to_exec                                     
+                                                                                
+  /mount/src/psx-ai-analyzer/app.py:190 in <module>                             
+                                                                                
+    187 │   │   │                                                               
+    188 │   │   │   ai_data_string = f"Co: {full_name}, P: {current_price}, RS  
+    189 │   │   │   report = analyze_with_ai(symbol, timeframe, ai_data_string  
+  ❱ 190 │   │   │   st.markdown(f"<div style='background-color:{bg_color}; col  
+    191 │   │   │                                                               
+    192 │   │   │   # Data Tables                                               
+    193 │   │   │   st.divider()                                                
+────────────────────────────────────────────────────────────────────────────────
+NameError: name 'bg_color' is not defined

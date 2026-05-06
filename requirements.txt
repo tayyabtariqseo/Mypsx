@@ -1,0 +1,10 @@
+streamlit
+pandas>=2.0.0
+pandas-ta
+yfinance
+plotly
+google-genai
+psxdata
+requests
+python-dotenv
+beautifulsoup4
