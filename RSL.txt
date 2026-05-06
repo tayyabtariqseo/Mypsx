@@ -1,0 +1,7 @@
+RAFI
+Symbol		qty	avg price 
+ 
+FFLM 		5000		7.10
+MLCF		1000		98.10
+PIBTL		11000		19.15
+THCCL		500		56.80

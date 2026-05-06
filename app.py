@@ -16,7 +16,7 @@ if 'analysis_data' not in st.session_state:
 if 'show_report' not in st.session_state:
     st.session_state.show_report = False
 if 'view_mode' not in st.session_state:
-    st.session_state.view_mode = "Analysis" # "Analysis" or "Calls"
+    st.session_state.view_mode = "Analysis" # "Analysis", "Calls", or "Portfolio"
 
 # Sidebar - Theme Toggle
 st.sidebar.header("🎨 Theme Settings")
@@ -167,6 +167,22 @@ def get_call_status(row):
         
     return "", "In Progress"
 
+def parse_portfolio_file(file_path):
+    """Parses portfolio data from text files."""
+    import os
+    if not os.path.exists(file_path):
+        return None
+    with open(file_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    data = []
+    for line in lines:
+        match = re.search(r'^([A-Z0-9\-]+)\s+(\d+)\s+([\d.]+)', line.strip())
+        if match:
+            symbol, qty, avg_p = match.groups()
+            qty, avg_p = int(qty), float(avg_p)
+            data.append({"Symbol": symbol, "Qty": qty, "Avg Price": avg_p, "Invested": qty * avg_p})
+    return pd.DataFrame(data) if data else None
+
 # 3. APP HEADER
 st.title("📊 PSX-AI Analyzer by Tayyab")
 
@@ -233,12 +249,17 @@ with col_b2:
     if st.button("Calls", width="stretch"):
         st.session_state.view_mode = "Calls"
 
-if st.sidebar.button("AI Report", width="stretch"):
-    if st.session_state.analysis_data:
-        st.session_state.show_report = True
-        st.session_state.view_mode = "Analysis"
-    else:
-        st.sidebar.warning("Please Analyze Stock first!")
+col_b3, col_b4 = st.sidebar.columns(2)
+with col_b3:
+    if st.button("AI Report", width="stretch"):
+        if st.session_state.analysis_data:
+            st.session_state.show_report = True
+            st.session_state.view_mode = "Analysis"
+        else:
+            st.sidebar.warning("Please Analyze Stock first!")
+with col_b4:
+    if st.button("Portfolio", width="stretch"):
+        st.session_state.view_mode = "Portfolio"
 
 # 4. MAIN DISPLAY LOGIC
 if st.session_state.view_mode == "Analysis" and st.session_state.analysis_data:
@@ -344,5 +365,36 @@ elif st.session_state.view_mode == "Calls":
         else:
             st.info("No active calls found in calls.txt.")
 
+elif st.session_state.view_mode == "Portfolio":
+    st.subheader("💼 PSX Portfolio Management")
+    
+    portfolio_files = {
+        "RAFI (RSL)": "RSL.txt",
+        "MMK": "MMK.txt",
+        "SPK": "SPK.txt",
+        "SFEL": "SFEL.txt"
+    }
+    
+    grand_total = 0
+    
+    for name, file in portfolio_files.items():
+        st.markdown(f"### 📁 {name}")
+        df_p = parse_portfolio_file(file)
+        if df_p is not None:
+            # Display Table
+            st.table(df_p.style.format({"Avg Price": "{:.2f}", "Invested": "{:,.2f}"}))
+            
+            # Subtotal
+            subtotal = df_p['Invested'].sum()
+            st.markdown(f"**Total Invested in {name}:** <span style='font-size:1.2rem; color:#26a69a;'>Rs. {subtotal:,.2f}</span>", unsafe_allow_html=True)
+            grand_total += subtotal
+            st.divider()
+        else:
+            st.warning(f"Could not load portfolio data for {name} ({file}).")
+    
+    # Grand Total
+    st.markdown(f"## 💰 Grand Total Portfolio Value")
+    st.markdown(f"<div style='background-color:{card_bg}; padding:30px; border-radius:15px; border: 2px solid #26a69a; text-align:center;'> <h1 style='margin:0; color:#26a69a;'>Rs. {grand_total:,.2f}</h1> <p style='margin:0; opacity:0.8;'>Total Amount Invested Across All Accounts</p> </div>", unsafe_allow_html=True)
+
 else:
-    st.info("👈 Enter a ticker and click Analyze to begin, or view active Calls.")
+    st.info("👈 Enter a ticker and click Analyze to begin, or view active Calls/Portfolio.")

@@ -1,0 +1,6 @@
+Symbol		qty	avg price 
+ 
+ASC 		10000		13.00
+PSO		800		480
+PIBTL		2500		19.50
+WAVES		5000		13.70
