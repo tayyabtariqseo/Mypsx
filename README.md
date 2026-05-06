@@ -3,7 +3,7 @@
 Professional-grade technical analysis and AI-driven insights for the Pakistan Stock Exchange (PSX), powered by Google Gemini.
 
 ## 🚀 Live Demo
-**[Link to your deployed app will go here]**
+**[mttpsx.streamlit.app](https://mttpsx.streamlit.app/)**
 
 ## ✨ Features
 - **Live Price Tracking:** Real-time data fetching from the PSX Data Portal.
