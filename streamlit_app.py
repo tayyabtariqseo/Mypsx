@@ -108,6 +108,11 @@ def parse_portfolio_file(file_path):
 # 3. MAIN PORTFOLIO LOGIC
 st.title("💼 PSX Portfolio")
 
+# Debug/Status Indicator
+with st.sidebar:
+    st.divider()
+    st.info(f"📊 System Status: Online | {datetime.datetime.now().strftime('%H:%M')}")
+
 portfolio_files = {
     "RAFI (RSL)": "RSL.txt",
     "MMK": "MMK.txt",
