@@ -91,16 +91,18 @@ def parse_portfolio_file(file_path):
         lines = f.readlines()
     data = []
     for line in lines:
-        line = line.strip()
-        if not line or "Symbol" in line or "qty" in line or "RAFI" in line or "SFEL" in line:
-            continue
-        # Regex to capture Symbol Qty Price (handle tabs or multiple spaces)
-        match = re.search(r'^([A-Z0-9\-]+)\s+(\d+)\s+([\d.]+)', line)
-        if match:
-            symbol, qty, avg_p = match.groups()
-            symbol = symbol.strip()
-            qty, avg_p = int(qty), float(avg_p)
-            data.append({"Symbol": symbol, "Qty": qty, "Avg Price": avg_p})
+        parts = line.split()
+        if len(parts) >= 3:
+            # Try to see if this is a data line (Symbol Qty Price)
+            try:
+                symbol = parts[0].strip()
+                qty = int(parts[1].replace(',', ''))
+                avg_p = float(parts[2].replace(',', ''))
+                # Basic validation: Symbol shouldn't be "Symbol" or "qty"
+                if symbol.lower() not in ["symbol", "qty", "avg", "total", "rafi", "sfel"]:
+                    data.append({"Symbol": symbol, "Qty": qty, "Avg Price": avg_p})
+            except ValueError:
+                continue
     return data
 
 # 3. MAIN PORTFOLIO LOGIC
