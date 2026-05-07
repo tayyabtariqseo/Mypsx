@@ -3,6 +3,8 @@ import pandas_ta as ta
 from psxdata import stocks
 import requests
 import datetime
+import re
+from bs4 import BeautifulSoup
 
 def get_live_price(symbol):
     """
