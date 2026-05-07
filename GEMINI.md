@@ -43,3 +43,8 @@ The price is well above the 9-EMA, showing strong short-term momentum:
 ## Project Guidelines
 - **Live Data:** Only fetch live price during market hours to minimize API hits.
 - **Offline Mode:** Show "Mkt is Close" with the last closing price in yellow outside hours.
+
+## AI Agent Guidelines
+- **Persistent Progress:** Update `SESSION_STATE.md` and `FULL_WORK_LOG.md` every 15 minutes or after significant milestones to ensure no work is lost.
+- **Quota Management:** Monitor token usage and stop operations when the session quota reaches **90%**.
+- **Session Handover:** When the quota limit is reached, perform a final save of all session data, state, and pending tasks for the next resumption.

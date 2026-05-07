@@ -1,26 +1,23 @@
-# PSX-AI Stock Analyzer - Session State (May 7, 2026 - 12:45)
+# PSX-AI Stock Analyzer - Session State (May 7, 2026 - 13:15)
 
 ## ✅ Summary of Work
-- **Environment Fix:** Re-installed Python dependencies in the local environment to fix missing `pandas` module.
-- **Dynamic Reporting:** Successfully generated and cached the AI report for SYS for May 7, 2026 (`analysis/SYS_2026-05-07.json`).
-- **Score Maintained:** Technical score remains at **75/100**, but CMP rose to **154.11**.
-- **Documentation:** Updated `GEMINI.md` with May 7 levels, pivots, and EMA supports.
-- **Git Path Resolved:** Verified that the Git executable path from memory works correctly.
+- **App Refactor:** Transformed `app.py` into a dedicated **Portfolio Management Dashboard**.
+- **Multi-Account Support:** Added a multi-select sidebar to view individual, multiple, or all accounts (RSL, MMK, SPK, SFEL).
+- **Live Profit/Loss:** Integrated real-time price fetching from `psx.com.pk` to calculate:
+    - Current Market Price
+    - Investment Value
+    - Real-time Profit/Loss (Amount & %)
+- **UI Hardening:** Removed complex analysis charts from the main screen to focus on portfolio tables.
+- **Background Logic:** Kept AI and Technical Indicator logic in the codebase for future background tasks.
+- **Sync:** Pushed changes to GitHub to update the live dashboard at [mttpsx.streamlit.app](https://mttpsx.streamlit.app/).
 
-## ⚠️ Online Sync
-- **Local Git Status:** Repository is ready for commit.
-- **Pending Push:** Need to push changes to GitHub to update the live dashboard.
+## ⚠️ Known Issues
+- **API Latency:** Fetching live prices for 10+ symbols simultaneously may take 1-2 seconds.
 
 ## 🎯 Next Steps
-1. **Commit & Push:**
-   ```bash
-   git add .
-   git commit -m "Update May 7 analysis, fix local environment, and sync documentation"
-   git push origin main
-   ```
-2. **Dashboard Check:** Verify [mttpsx.streamlit.app](https://mttpsx.streamlit.app/) reflects the new price (154.11) and May 7 report.
+1. **Verification:** Check the live site to ensure the portfolio tables render correctly with live colors (Green for Profit, Red for Loss).
+2. **Persistence Check:** Verify that the 15-minute save and 90% quota guidelines are consistently active.
 
 ## Verification Log
-- `generate_today_report.py`: SUCCESS (New report generated for May 7).
-- `GEMINI.md`: UPDATED (Reflects CMP 154.11 and 75/100 score).
-- `extract_gemini_data.py`: CREATED (Helper script for updating documentation).
+- `app.py`: SUCCESS (Dedicated Portfolio View implemented).
+- `indicators.py`: VERIFIED (Live price fetching is robust).
