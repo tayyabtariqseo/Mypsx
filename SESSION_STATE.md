@@ -1,15 +1,16 @@
-# PSX-AI Stock Analyzer - Session State (May 7, 2026 - 14:40)
+# PSX-AI Stock Analyzer - Session State (May 7, 2026 - 15:15)
 
 ## ✅ Summary of Work
-- **Issue Diagnosis:** The "blank screen" online was caused by a filename mismatch. The deployment server was looking for `streamlit_app.py`, but the file was named `app.py`.
-- **Filename Fix:** Renamed `app.py` to `streamlit_app.py` and synchronized with GitHub.
-- **Local Verification:** Fixed 'Errno 2' by restarting the local server to target `streamlit_app.py` instead of the renamed `app.py`. Confirmed success on `localhost:8501`.
-- **Dashboard Feature:** The new Portfolio Management dashboard is now fully active with live P/L and multi-account selection.
+- **Mobile Optimization:** Adjusted CSS, reduced font sizes, and shortened column headers (e.g., "CMP", "Invest", "P/L%") to ensure the dashboard fits perfectly on mobile screens.
+- **Parsing Improvement:** Enhanced the portfolio file parser to be more flexible with spaces/tabs and to skip header lines automatically.
+- **Sync:** Synchronized the four updated portfolio files (`RSL.txt`, `MMK.txt`, `SPK.txt`, `SFEL.txt`) with the latest data from GitHub.
+- **Procedure Documentation:** Created `DAILY_UPDATE_PROCEDURE.md` which provides a simple guide for updating daily sales and purchases.
+- **Verification:** Confirmed that the live site reflects the new mobile-friendly layout and updated portfolio values.
 
 ## 🎯 Next Steps
-1. **User Confirmation:** Verify the live site [mttpsx.streamlit.app](https://mttpsx.streamlit.app/) is now rendering the portfolio tables.
-2. **Quota Tracking:** Continuing to monitor session quota (currently well within limits).
+1. **User Feedback:** Confirm if the mobile layout meets expectations.
+2. **Quota Monitoring:** Session remains active and well within limits.
 
 ## Verification Log
-- `streamlit_app.py`: SUCCESS (App is serving locally and pushed to remote).
-- `error 1.txt`: ANALYZED (Confirmed the filename requirement for the 'blank-app' repository).
+- `streamlit_app.py`: SUCCESS (Mobile optimized).
+- `DAILY_UPDATE_PROCEDURE.md`: CREATED (User guide for daily maintenance).

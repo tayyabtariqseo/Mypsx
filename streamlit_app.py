@@ -106,12 +106,12 @@ def parse_portfolio_file(file_path):
 # 3. MAIN PORTFOLIO LOGIC
 st.title("💼 PSX Portfolio")
 
-portfolio_files = {{
+portfolio_files = {
     "RAFI (RSL)": "RSL.txt",
     "MMK": "MMK.txt",
     "SPK": "SPK.txt",
     "SFEL": "SFEL.txt"
-}}
+}
 
 # Sidebar Account Selection
 st.sidebar.header("📂 Accounts")
