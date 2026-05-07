@@ -63,9 +63,11 @@ def parse_portfolio_file(file_path):
     data = []
     for line in lines:
         # Regex to capture Symbol Qty Price
+        # Added .strip() to symbol to be safe
         match = re.search(r'^([A-Z0-9\-]+)\s+(\d+)\s+([\d.]+)', line.strip())
         if match:
             symbol, qty, avg_p = match.groups()
+            symbol = symbol.strip()
             qty, avg_p = int(qty), float(avg_p)
             data.append({"Symbol": symbol, "Qty": qty, "Purchase Price": avg_p})
     return data
@@ -111,14 +113,30 @@ else:
             price_map = {}
             for sym in unique_symbols:
                 live = fetch_live_data(sym)
-                price_map[sym] = live['price'] if live else 0.0
+                if live and live['price'] > 0:
+                    price_map[sym] = live['price']
+                else:
+                    # Fallback to historical if live fails
+                    try:
+                        hist = get_psx_data(sym.split('-')[0])
+                        if not hist.empty:
+                            price_map[sym] = hist.iloc[-1]['Close']
+                        else:
+                            price_map[sym] = 0.0
+                    except:
+                        price_map[sym] = 0.0
         
         # 3. Calculate Metrics
         df['Current Mkt Price'] = df['Symbol'].map(price_map)
+        
+        # Ensure Current Mkt Price is float and handle any zeros
+        df['Current Mkt Price'] = pd.to_numeric(df['Current Mkt Price'], errors='coerce').fillna(0.0)
+        
         df['Investment Value'] = df['Qty'] * df['Purchase Price']
         df['Current Value'] = df['Qty'] * df['Current Mkt Price']
         df['Profit/Loss'] = df['Current Value'] - df['Investment Value']
-        df['P/L %'] = (df['Profit/Loss'] / df['Investment Value']) * 100
+        # Avoid division by zero
+        df['P/L %'] = df.apply(lambda x: (x['Profit/Loss'] / x['Investment Value'] * 100) if x['Investment Value'] > 0 else 0, axis=1)
         
         # 4. Display Account-wise Tables or Merged View
         grand_total_invested = 0

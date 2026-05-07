@@ -7,33 +7,56 @@ import datetime
 def get_live_price(symbol):
     """
     Fetches the absolute latest price from the PSX Data Portal (DPS).
+    Tries the intraday API first, then falls back to scraping the company page.
     """
-    url = f"https://dps.psx.com.pk/timeseries/int/{symbol}"
-    headers = {
-        'User-Agent': 'Mozilla/5.0'
-    }
+    # 1. Try Intraday API
+    url_api = f"https://dps.psx.com.pk/timeseries/int/{symbol}"
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url_api, headers=headers, timeout=10)
         if response.status_code == 200:
             data = response.json()
             data_points = data.get('data', [])
             if data_points:
-                # The PSX DPS feed is sorted Newest-to-Oldest. 
-                # data[0] is the current live price.
                 latest = data_points[0]
-                
-                # Convert UTC timestamp to PKT (UTC+5)
                 utc_dt = datetime.datetime.fromtimestamp(latest[0], tz=datetime.timezone.utc)
                 pkt_dt = utc_dt.astimezone(datetime.timezone(datetime.timedelta(hours=5)))
-                
                 return {
                     "price": float(latest[1]),
                     "timestamp": pkt_dt,
-                    "volume": latest[2]
+                    "volume": latest[2],
+                    "source": "api"
                 }
-        return None
     except:
-        return None
+        pass
+
+    # 2. Fallback: Scrape from Company Page
+    url_scrape = f"https://dps.psx.com.pk/company/{symbol}"
+    try:
+        response = requests.get(url_scrape, headers=headers, timeout=10)
+        if response.status_code == 200:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # The price is in a div with class 'quote__price'
+            # Format is often "Rs.123.45 +1.23 (1.00%)"
+            price_div = soup.find('div', {'class': 'quote__price'})
+            if price_div:
+                text = price_div.text.strip()
+                # Extract the first numerical part after 'Rs.'
+                match = re.search(r'Rs\.?\s*([\d,.]+)', text)
+                if match:
+                    price_val = float(match.group(1).replace(',', ''))
+                    return {
+                        "price": price_val,
+                        "timestamp": datetime.datetime.now(),
+                        "volume": 0,
+                        "source": "scrape"
+                    }
+    except:
+        pass
+
+    return None
 
 def get_psx_data(symbol, start_date=None, end_date=None):
     """
