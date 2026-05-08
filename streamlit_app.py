@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from indicators import get_psx_data, calculate_indicators, get_live_price, calculate_pivots, get_company_info
-from ai_engine import analyze_with_ai_v2
+from ai_engine import analyze_with_ai_v2, analyze_portfolio_tiered, ask_ai_question, get_qa_history
 from persistence import load_cached_analysis, save_analysis
 import datetime
 import re
@@ -360,6 +360,43 @@ if st.session_state.logged_in:
                     st.markdown(report)
                 else:
                     st.warning("No portfolio data found to analyze.")
+
+        st.divider()
+        st.subheader("❓ AI Deep Dive")
+        st.info("Ask specific questions about any symbol or your recovery strategy.")
+        
+        user_query = st.text_input("What would you like to know?", placeholder="e.g., Should I sell ASTM to buy more SYS?", key="user_query_input")
+        
+        if st.button("Ask AI"):
+            if user_query:
+                # Prepare context
+                all_rows = []
+                for acc, file in {"RSL": "RSL.txt", "MMK": "MMK.txt", "SPK": "SPK.txt", "SFEL": "SFEL.txt"}.items():
+                    rows = parse_portfolio_file(file)
+                    if rows: [all_rows.append(r) for r in rows]
+                
+                if all_rows:
+                    with st.spinner("AI is thinking..."):
+                        context = pd.DataFrame(all_rows).to_dict('records')
+                        answer = ask_ai_question(user_query, context)
+                        st.markdown(f"**AI Answer:**\n{answer}")
+                else:
+                    st.warning("No portfolio data found to provide context.")
+            else:
+                st.warning("Please enter a question.")
+
+        # Show History
+        qa_history = get_qa_history()
+        if qa_history:
+            with st.expander("📜 View Question History"):
+                if st.button("Clear History"):
+                    if os.path.exists("analysis/qa_history.json"):
+                        os.remove("analysis/qa_history.json")
+                        st.rerun()
+                for item in reversed(qa_history):
+                    st.markdown(f"**[{item['timestamp']}] Q:** {item['question']}")
+                    st.markdown(f"**A:** {item['answer']}")
+                    st.divider()
 
 # Background Data Mechanism (Hidden from UI but available in code)
 # Existing functions like analyze_with_ai_v2 and calculate_indicators remain in memory/persistence.py

@@ -39,6 +39,53 @@ def get_history_context(type, days=7):
         context += f"\nDate {d}: {history[d]}\n"
     return context
 
+def save_qa_history(question, answer):
+    """Persists user Q&A for future reference."""
+    path = "analysis/qa_history.json"
+    history = []
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            history = json.load(f)
+    
+    history.append({
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "question": question,
+        "answer": answer
+    })
+    
+    with open(path, 'w') as f:
+        json.dump(history, f)
+
+def get_qa_history():
+    """Retrieves the full Q&A history."""
+    path = "analysis/qa_history.json"
+    if not os.path.exists(path):
+        return []
+    with open(path, 'r') as f:
+        return json.load(f)
+
+def ask_ai_question(question, portfolio_context):
+    """Answers a specific user question using the portfolio as context."""
+    client = get_ai_client()
+    if not client: return "Error: API Key missing."
+
+    prompt = f"""
+    You are a Portfolio Advisor. Use the following portfolio data as context:
+    {portfolio_context}
+    
+    User Question: {question}
+    
+    Provide a professional, actionable answer. If the question is about a specific symbol, look at its data in the context.
+    """
+    
+    try:
+        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+        answer = response.text
+        save_qa_history(question, answer)
+        return answer
+    except Exception as e:
+        return f"Query Failed: {str(e)}"
+
 def analyze_portfolio_tiered(report_type, portfolio_data, strategy="Strength-based Recovery"):
     """
     Tiered Analysis: Daily -> Weekly -> Monthly.
