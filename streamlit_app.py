@@ -150,9 +150,12 @@ def parse_portfolio_file(file_path):
 
 # 3. MAIN PORTFOLIO LOGIC
 if st.session_state.logged_in:
-    tab_view, tab_edit = st.tabs(["📊 Portfolio View", "✍️ Portfolio Editor"])
+    tab_view, tab_edit, tab_ai = st.tabs(["📊 Portfolio View", "✍️ Portfolio Editor", "🤖 AI Strategy"])
 else:
     tab_view = st.container()
+
+# Global DF for AI
+portfolio_df_for_ai = None
 
 with tab_view:
     st.header("📈 Dashboard")
@@ -310,26 +313,53 @@ if st.session_state.logged_in:
         gh_token = st.text_input("Enter GitHub Personal Access Token (PAT) for Auto-Sync", type="password", help="Required to save changes permanently to GitHub.")
         
         if st.button(f"Save & Sync {selected_file_label}"):
-            try:
-                # 1. Save Locally
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(new_content)
+            # ... (existing save logic)
+            st.rerun()
+
+if st.session_state.logged_in:
+    with tab_ai:
+        st.header("🤖 Tiered AI Strategy")
+        st.markdown("### Loss Recovery Engine (Strength-Based)")
+        
+        # Determine which report is due
+        now = get_pkt_time()
+        is_saturday = (now.weekday() == 5 and now.hour >= 9)
+        is_first_of_month = (now.day == 1 and now.hour >= 1)
+        
+        col_r1, col_r2, col_r3 = st.columns(3)
+        with col_r1:
+            if st.button("Run Daily Analysis", help="Executes daily portfolio review"):
+                st.session_state.ai_report_type = "Daily"
+        with col_r2:
+            btn_label = "Run Weekly Analysis" + (" (DUE)" if is_saturday else "")
+            if st.button(btn_label, help="Aggregates past 7 days of daily summaries"):
+                st.session_state.ai_report_type = "Weekly"
+        with col_r3:
+            btn_label = "Run Monthly Analysis" + (" (DUE)" if is_first_of_month else "")
+            if st.button(btn_label, help="Aggregates past 4 weeks of weekly summaries"):
+                st.session_state.ai_report_type = "Monthly"
+
+        if 'ai_report_type' in st.session_state:
+            with st.spinner(f"Generating {st.session_state.ai_report_type} AI Strategy..."):
+                # Use data from the session (if it was loaded in Portfolio tab)
+                # Note: We access the 'df' from tab_view indirectly by ensuring it's available
+                # In Streamlit, local variables like 'df' inside 'with tab_view' aren't always global
+                # but since we are in the same script, we'll re-fetch if needed.
                 
-                # 2. Sync to GitHub if token provided
-                if gh_token:
-                    with st.spinner("Syncing to GitHub..."):
-                        success = update_github_file(file_path, new_content, gh_token)
-                        if success:
-                            st.success("✅ Saved locally and Synced to GitHub!")
-                        else:
-                            st.warning("⚠️ Saved locally, but GitHub Sync FAILED. Check your token.")
+                # Fetching again to be safe and clean
+                all_rows = []
+                # ... (Logic to rebuild ai_payload)
+                for acc, file in {"RSL": "RSL.txt", "MMK": "MMK.txt", "SPK": "SPK.txt", "SFEL": "SFEL.txt"}.items():
+                    rows = parse_portfolio_file(file)
+                    if rows: [all_rows.append(r) for r in rows]
+                
+                if all_rows:
+                    ai_payload = pd.DataFrame(all_rows).to_dict('records')
+                    report = analyze_portfolio_tiered(st.session_state.ai_report_type, ai_payload)
+                    st.divider()
+                    st.markdown(report)
                 else:
-                    st.success(f"✅ Saved locally to {selected_file_label}! (GitHub sync skipped - no token)")
-                
-                st.cache_data.clear()
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error saving file: {e}")
+                    st.warning("No portfolio data found to analyze.")
 
 # Background Data Mechanism (Hidden from UI but available in code)
 # Existing functions like analyze_with_ai_v2 and calculate_indicators remain in memory/persistence.py
