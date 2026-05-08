@@ -15,12 +15,14 @@ if 'view_mode' not in st.session_state:
     st.session_state.view_mode = "Portfolio"
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+if 'gh_token' not in st.session_state:
+    st.session_state.gh_token = ""
 
 # Sidebar - Login Section
 st.sidebar.header("🔒 Privacy & Admin")
 if not st.session_state.logged_in:
-    pin = st.sidebar.text_input("Enter PIN to unlock", type="password")
-    if pin == "786": # User can change this PIN
+    pin = st.sidebar.text_input("Enter PIN to unlock", type="password", key="login_pin")
+    if pin == "786":
         st.session_state.logged_in = True
         st.rerun()
 else:
@@ -310,11 +312,32 @@ if st.session_state.logged_in:
         
         st.divider()
         st.subheader("🚀 Cloud Sync (GitHub)")
-        gh_token = st.text_input("Enter GitHub Personal Access Token (PAT) for Auto-Sync", type="password", help="Required to save changes permanently to GitHub.")
+        gh_token = st.text_input("Enter GitHub Personal Access Token (PAT) for Auto-Sync", value=st.session_state.gh_token, type="password", help="Required to save changes permanently to GitHub.")
         
         if st.button(f"Save & Sync {selected_file_label}"):
-            # ... (existing save logic)
-            st.rerun()
+            try:
+                # Store token in session state
+                st.session_state.gh_token = gh_token
+                
+                # 1. Save Locally
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                
+                # 2. Sync to GitHub if token provided
+                if gh_token:
+                    with st.spinner("Syncing to GitHub..."):
+                        success = update_github_file(file_path, new_content, gh_token)
+                        if success:
+                            st.success(f"✅ Data Saved Locally and Synced to GitHub for {selected_file_label}!")
+                        else:
+                            st.error("❌ GitHub Sync FAILED. Data saved locally only. Check your token scopes (repo).")
+                else:
+                    st.success(f"✅ Data Saved Locally to {selected_file_label}! (GitHub sync skipped)")
+                
+                st.cache_data.clear()
+                # st.rerun() # Don't rerun immediately so user sees the success message
+            except Exception as e:
+                st.error(f"Error saving file: {e}")
 
 if st.session_state.logged_in:
     with tab_ai:
