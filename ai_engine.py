@@ -7,7 +7,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_ai_client():
+    # 1. Try Environment Variable (Local/.env)
     api_key = os.getenv("GOOGLE_API_KEY")
+    
+    # 2. Try Streamlit Secrets (Cloud)
+    if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("GOOGLE_API_KEY")
+        except: pass
+        
+    # 3. Direct Fallback (Provided by user for this project)
+    if not api_key:
+        api_key = "AIzaSyDqRH_N12GpkxGoaN2AHXP7l3-KcVfdm9g"
+
     if not api_key:
         return None
     return genai.Client(api_key=api_key)
