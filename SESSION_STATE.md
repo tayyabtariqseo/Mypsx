@@ -1,17 +1,23 @@
-# PSX Portfolio Recovery Engine - Session State (May 9, 2026 - COMPLETED)
+# PSX Portfolio Recovery Engine - Session State (May 9, 2026 - FINAL CAPTURE)
 
-## ✅ Summary of Work
-- **Strategic Pivot:** Refactored the entire project to focus on **Portfolio Recovery & Growth**.
-- **UI Simplification:** Removed individual Stock Analysis and Calls pages. Streamlined the dashboard for recovery monitoring.
-- **Growth Tracker:** Implemented **Day 1 Growth %** logic. "Day 0" baseline (May 9, 2026) is now active.
-- **AI Hardening:** Resolved `429 RESOURCE_EXHAUSTED` error by implementing model rotation (`1.5-flash` -> `2.0-flash-exp` -> `1.5-pro`) and aggressive caching.
-- **Offline Reliability:** Enforced strict market-hour logic. The app now seamlessly uses `last_prices.json` outside PSX hours (Mon-Fri) and during weekends.
+## ✅ Summary of Current Progress
+- **Architectural Shift:** Refactored from stock analysis to a specialized **Portfolio Recovery & Growth Engine**.
+- **Expert Logic:** Implemented mathematically correct **Weighted Average Price** calculations for aggregated AI data.
+- **Data Sync:** Integrated a `session_state` price cache to eliminate redundant API calls and synchronize CMP across all views.
+- **UI Standards:** Professional "Management Console" interface with all emojis and "kid-like" elements removed.
+- **AI Resilience:** Implemented a multi-model rotation pool with 150s persistent blacklisting and task-persistence.
+- **Day 0 Baseline:** May 9, 2026, baseline is active; Growth Tracker displays percentage performance from this point.
 
-## ⚠️ Action Required
-- **Deployment:** Push the updated `streamlit_app.py`, `ai_engine.py`, and `persistence.py` to GitHub.
-- **Verification:** Log in with PIN "786" and go to the **Growth Tracker** tab to verify the Day 0 setup.
+## 🔴 Persistent Issue (Pending Resumption)
+- **AI Quota Loop:** Despite model rotation and blacklisting, the "Limit Exceeded" error persists on the live app. 
+- **Mandate for Next Session:** **DO NOT** attempt further fixes until the user provides the latest error log file. The first task upon resumption must be: "Please provide the latest error file for analysis."
+
+## 📄 Reference Files
+- `USER_DIRECTIVES_ARCHIVE.md`: Master blueprint of all user requirements.
+- `streamlit_app.py`: Latest Management Console implementation.
+- `ai_engine.py`: High-resiliency orchestration logic.
+- `persistence.py`: Baseline and Rate-Limit management.
 
 ## Verification Log
-- `streamlit_app.py`: REFACTORED for Recovery/Growth.
-- `ai_engine.py`: QUOTA-OPTIMIZED.
-- `GEMINI.md`: UPDATED to new project scope.
+- **Git Commit:** `3e1f487` (Pushed to main).
+- **Environment:** Streamlit Cloud (Python 3.12).

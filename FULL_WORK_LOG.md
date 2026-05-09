@@ -1,22 +1,21 @@
-# PSX Portfolio Recovery Engine - Full Work Log (May 9, 2026)
+# PSX Portfolio Recovery Engine - Full Work Log (May 9, 2026 - FINAL)
 
-## Current Status: System Optimized for Recovery Tracking.
+## Current Status: Expert Handover Mode.
 
-### 1. Scope Realignment:
-- **Core Goal:** Recovery of all 4 accounts (RSL, MMK, SPK, SFEL) to profitability.
-- **Removed Features:** Individual stock analysis tabs and trading calls tracker have been removed from the UI to focus the user experience.
-- **Background Intelligence:** Technical analysis (indicators, pivots, EMAs) remains in the code but is used exclusively by the AI to generate recovery strategies.
+### 1. Key Accomplishments:
+- **Refactoring:** Completed the shift to a Portfolio Recovery & Growth focus.
+- **Weighted Averages:** Upgraded `deduplicate_portfolio_by_account` in `ai_engine.py` to use institutional weighted average pricing (Total Cost / Total Qty).
+- **Price Synchronization:** Optimized `streamlit_app.py` with a `session_state` cache to prevent redundant API hits and ensure data consistency.
+- **UI Professionalism:** Removed all emojis, hidden Streamlit branding, and simplified navigation to a professional "Management Console."
+- **AI Orchestration:** Expanded model rotation pool and implemented a 150-second persistent blacklist to battle rate-limiting.
 
-### 2. Implementation of Growth Tracker:
-- **Day 0 (May 9, 2026):** Baseline established for total account values.
-- **Percentage Tracking:** Starting Day 1, the app will display growth/loss as a percentage against the Day 0 baseline (e.g., +5.6% Growth).
-- **Manual Reset:** Provided a "Set Day 0 Baseline" button in the sidebar for the user to initialize or reset tracking.
+### 2. Handover Instructions:
+- The next session **MUST** start by requesting the error log from the user. 
+- The AI quota issue is persistent even with 150s cooldowns; further diagnosis requires the specific Traceback from Streamlit Cloud.
+- Do not modify core logic until the new error file is analyzed.
 
-### 3. AI Quota & Offline Logic:
-- **Error 429 Fix:** Implemented model fallback logic in `ai_engine.py`. If one model hits a quota limit, the system automatically tries the next available model.
-- **Market Hours Compliance:** Added logic to prevent live API calls outside PKT market hours. The system now uses cached data from Friday's close for all weekend operations.
-
-### 4. Code Changes:
-- `streamlit_app.py`: Major rewrite for the new Navigation and Dashboard structure.
-- `ai_engine.py`: Added model rotation and recovery-focused prompt engineering.
-- `persistence.py`: Added baseline management and pkt_time helpers.
+### 3. File Inventory:
+- `streamlit_app.py`: UI and Orchestration.
+- `ai_engine.py`: Professional reporting and model rotation.
+- `persistence.py`: Data persistence and limit tracking.
+- `USER_DIRECTIVES_ARCHIVE.md`: Master requirement list.
