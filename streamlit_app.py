@@ -10,16 +10,16 @@ import json
 import time
 import concurrent.futures
 
-# 1. THEME & GLOBAL UI STYLING
-st.set_page_config(page_title="PSX Portfolio Recovery Engine", layout="wide")
+# 1. THEME & GLOBAL UI STYLING (Professional Cleanup)
+st.set_page_config(page_title="Portfolio Recovery Engine", layout="wide")
 
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'ai_report' not in st.session_state: st.session_state.ai_report = ""
 
-# Sidebar - Admin
-st.sidebar.title("🛡️ Portfolio Recovery")
+# Sidebar - Administration
+st.sidebar.title("Portfolio Recovery")
 if not st.session_state.logged_in:
-    pin = st.sidebar.text_input("Enter PIN", type="password")
+    pin = st.sidebar.text_input("PIN", type="password")
     if pin == "786":
         st.session_state.logged_in = True
         st.rerun()
@@ -28,7 +28,7 @@ else:
         st.session_state.logged_in = False
         st.rerun()
 
-st.sidebar.header("📍 Navigation")
+st.sidebar.header("Navigation")
 page = st.sidebar.radio("Go to", ["Recovery Dashboard", "Growth Tracker", "Portfolio Editor", "AI Recovery Strategy"])
 
 theme_choice = st.sidebar.radio("Appearance", options=["Dark", "Light"], index=0)
@@ -42,6 +42,9 @@ st.markdown(f"""
     .stApp {{ background-color: {bg} !important; color: {txt} !important; }}
     .stTable {{ background-color: {card}; font-size: 0.85rem !important; }}
     .stMetric {{ background-color: {card}; padding: 15px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.1); }}
+    /* Hide Streamlit elements for a professional look */
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
     </style>
     """, unsafe_allow_html=True)
 
@@ -89,22 +92,20 @@ def parse_portfolio_file(file_path):
 portfolio_files = {"RAFI (RSL)": "RSL.txt", "MMK": "MMK.txt", "SPK": "SPK.txt", "SFEL": "SFEL.txt"}
 
 def get_full_portfolio_data():
-    """Returns data grouped by account for AI consumption."""
     grouped_data = {}
     price_map = get_persistent_prices()
     for label, file in portfolio_files.items():
         rows = parse_portfolio_file(file)
-        for r in rows:
-            r['CMP'] = price_map.get(r['Symbol'], 0)
+        for r in rows: r['CMP'] = price_map.get(r['Symbol'], 0)
         grouped_data[label] = rows
     return grouped_data
 
 if page == "Recovery Dashboard":
-    st.header("📈 Portfolio Recovery Dashboard")
+    st.header("Portfolio Recovery Dashboard")
     mkt_open = is_market_open()
-    st.sidebar.info(f"Market: {'🟢 OPEN' if mkt_open else '🔴 CLOSED'}\n\nPKT: {get_pkt_time().strftime('%H:%M')}")
+    st.sidebar.info(f"Market Status: {'OPEN' if mkt_open else 'CLOSED'}\n\nPKT: {get_pkt_time().strftime('%H:%M')}")
     
-    selected_accounts = st.sidebar.multiselect("Accounts", options=list(portfolio_files.keys()), default=list(portfolio_files.keys()))
+    selected_accounts = st.sidebar.multiselect("Select Accounts", options=list(portfolio_files.keys()), default=list(portfolio_files.keys()))
     
     if not selected_accounts:
         st.info("Select accounts to monitor recovery.")
@@ -120,7 +121,7 @@ if page == "Recovery Dashboard":
             stored_prices = get_persistent_prices()
             price_map = {}
             
-            with st.spinner("Updating Market Data..."):
+            with st.spinner("Syncing Market Data..."):
                 with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
                     futures = {ex.submit(fetch_price_logic, s, mkt_open, stored_prices): s for s in unique_symbols}
                     for f in concurrent.futures.as_completed(futures):
@@ -141,8 +142,8 @@ if page == "Recovery Dashboard":
                 i, c = acc_df['Invested'].sum(), acc_df['Current'].sum()
                 grand_total_invested += i; grand_total_current += c
                 
-                status = "🟢 PROFIT" if (c - i) >= 0 else "🔴 RECOVERY"
-                st.subheader(f"📁 {acc} - {status}")
+                status = "PROFIT" if (c - i) >= 0 else "RECOVERY"
+                st.subheader(f"Account: {acc} ({status})")
                 
                 cols = ["Symbol", "Qty", "Avg Price", "Invested", "CMP", "P/L", "P/L%"]
                 disp = acc_df[cols].copy()
@@ -161,14 +162,14 @@ if page == "Recovery Dashboard":
                 
                 t1, t2, t3 = st.columns(3)
                 if st.session_state.logged_in:
-                    t1.metric("Acc Invested (PKR)", f"{i:,.0f}")
-                    t2.metric("Acc Value (PKR)", f"{c:,.0f}")
-                    t3.metric("Acc P/L (PKR)", f"{c-i:,.0f}", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
+                    t1.metric("Account Invested (PKR)", f"{i:,.0f}")
+                    t2.metric("Account Value (PKR)", f"{c:,.0f}")
+                    t3.metric("Account P/L (PKR)", f"{c-i:,.0f}", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
                 else:
-                    t3.metric("Acc P/L%", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
+                    t3.metric("Account P/L%", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
             
             st.divider()
-            st.markdown("### 💰 Consolidated Portfolio Summary")
+            st.markdown("### Consolidated Portfolio Summary")
             ti, tc = grand_total_invested, grand_total_current
             s1, s2, s3 = st.columns(3)
             if st.session_state.logged_in:
@@ -179,9 +180,9 @@ if page == "Recovery Dashboard":
                 s3.metric("Total Portfolio P/L%", f"{(tc-ti)/ti*100 if ti>0 else 0:.1f}%")
 
 elif page == "Growth Tracker":
-    st.header("📈 Growth Tracker (Post Day 0)")
+    st.header("Growth Tracker (Post Day 0)")
     baseline = get_baseline()
-    st.info("Tracking growth from May 9, 2026 (Day 0). Baseline is established on this date.")
+    st.info("Tracking growth from May 9, 2026 (Day 0).")
     
     all_data_flat = []
     for acc, f in portfolio_files.items():
@@ -202,7 +203,7 @@ elif page == "Growth Tracker":
                 st.rerun()
         
         if not baseline:
-            st.warning("No Baseline set. Admin must login to set Day 0 Baseline.")
+            st.warning("No Baseline set. Administrator must login to set Day 0 Baseline.")
         else:
             rows = []
             for acc in portfolio_files.keys():
@@ -210,7 +211,6 @@ elif page == "Growth Tracker":
                 c_val = acc_growth.get(acc, 0)
                 diff = c_val - b_val
                 perc = (diff / b_val * 100) if b_val > 0 else 0
-                
                 if st.session_state.logged_in:
                     rows.append({"Account": acc, "Baseline (PKR)": b_val, "Current Value (PKR)": c_val, "Growth (%)": perc})
                 else:
@@ -218,9 +218,7 @@ elif page == "Growth Tracker":
 
             df_growth = pd.DataFrame(rows)
             fmt_g = {"Growth (%)": "{:+.2f}%"}
-            if st.session_state.logged_in:
-                fmt_g.update({"Baseline (PKR)": "{:,.0f}", "Current Value (PKR)": "{:,.0f}"})
-            
+            if st.session_state.logged_in: fmt_g.update({"Baseline (PKR)": "{:,.0f}", "Current Value (PKR)": "{:,.0f}"})
             st.table(df_growth.style.format(fmt_g))
             
             total_b = sum(baseline.values())
@@ -228,13 +226,11 @@ elif page == "Growth Tracker":
             total_perc = ((total_c - total_b) / total_b * 100) if total_b > 0 else 0
             
             st.divider()
-            if st.session_state.logged_in:
-                st.metric("Consolidated Portfolio Growth (PKR)", f"{total_c:,.0f}", f"{total_perc:+.2f}%")
-            else:
-                st.metric("Consolidated Portfolio Growth (%)", f"{total_perc:+.2f}%")
+            if st.session_state.logged_in: st.metric("Consolidated Portfolio Growth (PKR)", f"{total_c:,.0f}", f"{total_perc:+.2f}%")
+            else: st.metric("Consolidated Portfolio Growth (%)", f"{total_perc:+.2f}%")
 
 elif page == "Portfolio Editor":
-    st.header("✍️ Editor")
+    st.header("Portfolio Editor")
     if not st.session_state.logged_in:
         st.warning("Login required.")
     else:
@@ -248,47 +244,55 @@ elif page == "Portfolio Editor":
             st.success("Saved.")
 
 elif page == "AI Recovery Strategy":
-    st.header("🤖 AI Portfolio Strategy")
+    st.header("AI Portfolio Strategy")
     if not st.session_state.logged_in:
         st.warning("Login required.")
     else:
-        grouped_portfolio = get_full_portfolio_data()
-        
-        # Rate Limit Timer Section
+        # 1. Check for global cooldown immediately
         limits = load_limits()
         max_wait = 0
         for m, t in limits.items():
-            if time.time() < t:
-                max_wait = max(max_wait, int(t - time.time()))
+            if time.time() < t: max_wait = max(max_wait, int(t - time.time()))
         
         if max_wait > 0:
-            st.warning(f"🕒 AI cooldown in progress... Resuming in {max_wait} seconds.")
+            st.warning(f"AI Cooldown: Resuming in {max_wait} seconds.")
             time.sleep(1)
             st.rerun()
 
+        grouped_portfolio = get_full_portfolio_data()
+        
         c1, c2 = st.columns(2)
-        if c1.button("Analyze Portfolio"): 
-            with st.spinner("Analyzing Portfolios by Account..."):
+        if c1.button("Daily Recovery Report"): 
+            with st.spinner("Generating Institutional Report..."):
                 res = analyze_portfolio_tiered("Daily", grouped_portfolio)
-                if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
+                if res.startswith("RATE_LIMIT"): 
+                    st.error(f"Quota exceeded. {res.replace('RATE_LIMIT:', '')}. Retrying in 60s...")
+                    time.sleep(1)
+                    st.rerun()
                 else: st.session_state.ai_report = res
         
         if c2.button("Weekly Recovery Plan"):
-            with st.spinner("Planning Recovery by Account..."):
+            with st.spinner("Generating Strategic Plan..."):
                 res = analyze_portfolio_tiered("Weekly", grouped_portfolio)
-                if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
+                if res.startswith("RATE_LIMIT"): 
+                    st.error(f"Quota exceeded. {res.replace('RATE_LIMIT:', '')}. Retrying in 60s...")
+                    time.sleep(1)
+                    st.rerun()
                 else: st.session_state.ai_report = res
         
         if st.session_state.ai_report:
             st.markdown(st.session_state.ai_report)
 
         st.divider()
-        q = st.text_input("Ask about Recovery/Growth...")
-        if st.button("Ask AI"):
+        q = st.text_input("Institutional Inquiry (Recovery/Growth Focus)")
+        if st.button("Query AI"):
             if q:
-                with st.spinner("Senior Analyst Thinking..."):
+                with st.spinner("Senior Analyst Analysis..."):
                     res = ask_ai_question(q, grouped_portfolio)
-                    if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
+                    if res.startswith("RATE_LIMIT"): 
+                        st.error(f"Quota exceeded. {res.replace('RATE_LIMIT:', '')}. Retrying in 60s...")
+                        time.sleep(1)
+                        st.rerun()
                     else: 
                         st.markdown(res)
                         model_name = res.split('`')[1] if '`' in res else 'Unknown'
@@ -296,7 +300,7 @@ elif page == "AI Recovery Strategy":
         
         hist = get_qa_history()
         if hist:
-            with st.expander("📜 Strategy History"):
+            with st.expander("Strategic Inquiry History"):
                 for item in reversed(hist):
                     st.markdown(f"**Q:** {item['question']}\n**A:** {item['answer']}")
                     st.divider()

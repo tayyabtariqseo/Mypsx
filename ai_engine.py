@@ -22,7 +22,6 @@ def get_ai_client():
     except: return None
 
 def deduplicate_portfolio_by_account(portfolio_dict):
-    """Groups holdings by account and symbol to optimize tokens while preserving account separation."""
     structured_data = {}
     for acc_name, holdings in portfolio_dict.items():
         acc_summary = {}
@@ -34,7 +33,6 @@ def deduplicate_portfolio_by_account(portfolio_dict):
             acc_summary[sym]["AvgPrice"] += item["Avg Price"]
             acc_summary[sym]["Count"] += 1
         
-        # Finalize averages for the account
         for sym in acc_summary:
             acc_summary[sym]["AvgPrice"] /= acc_summary[sym]["Count"]
             del acc_summary[sym]["Count"]
@@ -47,29 +45,31 @@ def ask_ai_question(question, portfolio_dict):
     
     compact_data = deduplicate_portfolio_by_account(portfolio_dict)
     models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-flash-latest", "gemini-pro-latest"]
-    
     today_str = datetime.datetime.now().strftime("%B %d, %Y")
     
     prompt = f"""
-    TODAY'S DATE: {today_str}
-    CURRENCY: All values are in PKR (Pakistani Rupee).
-    ROLE: Senior Institutional Portfolio Manager & PSX Expert.
+    DATE: {today_str} (Current/Actual)
+    CURRENCY: PKR
+    ROLE: Senior Portfolio Manager (Institutional).
     
-    CONTEXT (Portfolios by Account):
+    DATA (Portfolios by Account):
     {json.dumps(compact_data, indent=2)}
     
     USER QUERY: {question}
     
     STRICT INSTRUCTIONS:
-    1. Use the EXACT prices (CMP) provided. Never assume or invent "Current Prices".
-    2. Deal with each account as a separate portfolio.
-    3. Provide professional, data-driven analysis focused on loss recovery.
-    4. Do not use '$' symbols. Use 'PKR' or no symbol.
+    1. NEVER assume a date. Today is {today_str}.
+    2. NEVER assume or invent prices. Use CMP.
+    3. NO '$' symbols. All values are in PKR.
+    4. Provide analysis for EACH account separately as requested.
+    5. DO NOT show tables of individual symbols unless requested. Show Account totals.
     """
 
+    tried_models = []
     for model_name in models:
         avail, _ = is_model_available(model_name)
         if not avail: continue
+        tried_models.append(model_name)
         try:
             response = client.models.generate_content(model=model_name, contents=prompt)
             if response.text:
@@ -78,7 +78,7 @@ def ask_ai_question(question, portfolio_dict):
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
                 mark_model_exhausted(model_name)
                 continue
-    return "RATE_LIMIT"
+    return f"RATE_LIMIT: Tried {tried_models}"
 
 def analyze_portfolio_tiered(report_type, portfolio_dict):
     client = get_ai_client()
@@ -86,35 +86,32 @@ def analyze_portfolio_tiered(report_type, portfolio_dict):
 
     compact_data = deduplicate_portfolio_by_account(portfolio_dict)
     models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-pro-latest"]
-    
     today_str = datetime.datetime.now().strftime("%B %d, %Y")
     
     prompt = f"""
-    DATE: {today_str}
+    DATE: {today_str} (STRICTLY CURRENT)
     CURRENCY: PKR
     TASK: {report_type} Institutional Portfolio Review.
-    GOAL: Loss Recovery (Primary) & Systematic Growth.
+    GOAL: Recovery of each account to net profit.
     
     DATA (Grouped by Account):
     {json.dumps(compact_data, indent=2)}
     
-    REPORT STRUCTURE REQUIREMENTS:
-    1. EXECUTIVE SUMMARY: High-level overview of the total {today_str} status in PKR.
-    2. PERFORMANCE OVERVIEW (PER ACCOUNT):
-       - Create a separate analysis/section for EACH account (e.g., RSL, MMK, SPK, SFEL).
-       - Show performance metrics (Cost, Value, P&L) for each account in PKR.
-       - Use the EXACT CMP provided in the data. Never say "Assumed Price".
-    3. RECOVERY STRATEGY (PER ACCOUNT):
-       - Tailor the strategy for each account. Suggest specific recovery paths (Hold/Average/Switch) based on the specific holdings of that account.
-    4. TECHNICAL INSIGHTS: Apply background technical analysis (EMA/RSI/Pivots methodology) to justify the recovery moves.
-    
-    TONE: Senior Portfolio Strategist (Professional, Precise, Actionable).
-    STRICT: No '$' symbols. No invented dates. No invented prices.
+    REPORT REQUIREMENTS:
+    1. EXECUTIVE SUMMARY: Consolidated status in PKR.
+    2. PERFORMANCE OVERVIEW: Show EACH account (RSL, MMK, SPK, SFEL) separately. 
+       - Report ONLY Account Totals (Cost, Value, P&L) in PKR.
+       - NEVER show a table with individual Tickers/Symbols here.
+    3. RECOVERY STRATEGY: Treat each account as a separate portfolio. 
+       - Mention specific tickers only in text to explain the strategy (Buy/Hold/Switch).
+    4. No Emojis. Professional Tone. No '$'. No assumed dates.
     """
 
+    tried_models = []
     for model_name in models:
         avail, _ = is_model_available(model_name)
         if not avail: continue
+        tried_models.append(model_name)
         try:
             response = client.models.generate_content(model=model_name, contents=prompt)
             if response.text:
@@ -123,7 +120,7 @@ def analyze_portfolio_tiered(report_type, portfolio_dict):
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
                 mark_model_exhausted(model_name)
                 continue
-    return "RATE_LIMIT"
+    return f"RATE_LIMIT: Tried {tried_models}"
 
 def get_qa_history():
     path = "analysis/qa_history.json"
