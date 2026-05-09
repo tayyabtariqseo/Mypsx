@@ -1,16 +1,17 @@
-# PSX-AI Stock Analyzer - Session State (May 8, 2026 - SUCCESS)
+# PSX Portfolio Recovery Engine - Session State (May 9, 2026 - COMPLETED)
 
 ## ✅ Summary of Work
-- **Deployment:** SUCCESS. App is live on Streamlit Cloud using Python 3.12.
-- **Market Status:** Verified open (Friday).
-- **Daily Analysis:** Updated (SYS CMP 154.10). Technical score 80/100.
-- **AI Report:** Generated and saved for May 8.
-- **Environment Fix:** Forced Python 3.12 via `.python-version` and `runtime.txt` to resolve `pandas-ta` dependency issues.
+- **Strategic Pivot:** Refactored the entire project to focus on **Portfolio Recovery & Growth**.
+- **UI Simplification:** Removed individual Stock Analysis and Calls pages. Streamlined the dashboard for recovery monitoring.
+- **Growth Tracker:** Implemented **Day 1 Growth %** logic. "Day 0" baseline (May 9, 2026) is now active.
+- **AI Hardening:** Resolved `429 RESOURCE_EXHAUSTED` error by implementing model rotation (`1.5-flash` -> `2.0-flash-exp` -> `1.5-pro`) and aggressive caching.
+- **Offline Reliability:** Enforced strict market-hour logic. The app now seamlessly uses `last_prices.json` outside PSX hours (Mon-Fri) and during weekends.
 
-## ⚠️ Action Required (For User)
-- No immediate action. The system is stable and live.
+## ⚠️ Action Required
+- **Deployment:** Push the updated `streamlit_app.py`, `ai_engine.py`, and `persistence.py` to GitHub.
+- **Verification:** Log in with PIN "786" and go to the **Growth Tracker** tab to verify the Day 0 setup.
 
 ## Verification Log
-- `mttpsx.streamlit.app`: WORKING (Confirmed by user).
-- `GEMINI.md`: SYNCED with May 8 data.
-- `SESSION_STATE.md`: UPDATED to Success status.
+- `streamlit_app.py`: REFACTORED for Recovery/Growth.
+- `ai_engine.py`: QUOTA-OPTIMIZED.
+- `GEMINI.md`: UPDATED to new project scope.

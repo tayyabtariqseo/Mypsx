@@ -7,160 +7,121 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_ai_client():
-    # 1. Try Environment Variable (Local/.env)
     api_key = os.getenv("GOOGLE_API_KEY")
-    
-    # 2. Try Streamlit Secrets (Cloud)
     if not api_key:
         try:
             import streamlit as st
             api_key = st.secrets.get("GOOGLE_API_KEY")
         except: pass
-        
-    # 3. Direct Fallback (Provided by user for this project)
     if not api_key:
         api_key = "AIzaSyDqRH_N12GpkxGoaN2AHXP7l3-KcVfdm9g"
-
     if not api_key:
         return None
     return genai.Client(api_key=api_key)
 
 def save_summary(type, date_str, data):
-    """Saves daily/weekly summaries for tiered memory."""
     path = f"analysis/summaries_{type}.json"
     history = {}
     if os.path.exists(path):
-        with open(path, 'r') as f:
-            history = json.load(f)
-    
+        with open(path, 'r') as f: history = json.load(f)
     history[date_str] = data
-    with open(path, 'w') as f:
-        json.dump(history, f)
+    with open(path, 'w') as f: json.dump(history, f)
 
 def get_history_context(type, days=7):
-    """Retrieves recent history for tiered context."""
     path = f"analysis/summaries_{type}.json"
-    if not os.path.exists(path):
-        return ""
-    with open(path, 'r') as f:
-        history = json.load(f)
-    
-    # Sort and get last N entries
+    if not os.path.exists(path): return ""
+    with open(path, 'r') as f: history = json.load(f)
     sorted_dates = sorted(history.keys(), reverse=True)
     context = ""
-    for d in sorted_dates[:days]:
-        context += f"\nDate {d}: {history[d]}\n"
+    for d in sorted_dates[:days]: context += f"\nDate {d}: {history[d]}\n"
     return context
 
 def save_qa_history(question, answer):
-    """Persists user Q&A for future reference."""
     path = "analysis/qa_history.json"
     history = []
     if os.path.exists(path):
-        with open(path, 'r') as f:
-            history = json.load(f)
-    
+        with open(path, 'r') as f: history = json.load(f)
     history.append({
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "question": question,
         "answer": answer
     })
-    
-    with open(path, 'w') as f:
-        json.dump(history, f)
+    if len(history) > 20: history = history[-20:]
+    with open(path, 'w') as f: json.dump(history, f)
 
 def get_qa_history():
-    """Retrieves the full Q&A history."""
     path = "analysis/qa_history.json"
-    if not os.path.exists(path):
-        return []
-    with open(path, 'r') as f:
-        return json.load(f)
+    if not os.path.exists(path): return []
+    with open(path, 'r') as f: return json.load(f)
 
 def ask_ai_question(question, portfolio_context):
-    """Answers a specific user question using the portfolio as context."""
     client = get_ai_client()
     if not client: return "Error: API Key missing."
-
-    prompt = f"""
-    You are a Portfolio Advisor. Use the following portfolio data as context:
-    {portfolio_context}
     
+    # Priority rotation to avoid 429 on free tier
+    models = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"]
+    
+    prompt = f"""
+    Portfolio Context: {portfolio_context}
     User Question: {question}
     
-    Provide a professional, actionable answer. If the question is about a specific symbol, look at its data in the context.
+    Role: Senior Portfolio Recovery Expert for Pakistan Stock Exchange.
+    Instructions: 
+    - Focus on loss recovery until accounts are profitable, then shift to growth.
+    - Provide actionable, professional advice.
+    - If data suggests a stock is weak, suggest recovery paths (averaging, switching, or holding).
     """
-    
-    try:
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-        answer = response.text
-        save_qa_history(question, answer)
-        return answer
-    except Exception as e:
-        return f"Query Failed: {str(e)}"
 
-def analyze_portfolio_tiered(report_type, portfolio_data, strategy="Strength-based Recovery"):
-    """
-    Tiered Analysis: Daily -> Weekly -> Monthly.
-    portfolio_data: dict with account names as keys and lists of holdings as values.
-    """
+    for model_name in models:
+        try:
+            response = client.models.generate_content(model=model_name, contents=prompt)
+            answer = response.text
+            save_qa_history(question, answer)
+            return answer
+        except Exception as e:
+            if "429" in str(e): continue
+            return f"Query Failed: {str(e)}"
+    return "AI is temporarily busy (Quota Limit). Please retry in 1 minute."
+
+def analyze_portfolio_tiered(report_type, portfolio_data):
     client = get_ai_client()
     if not client: return "Error: API Key missing."
 
-    model = "gemini-2.0-flash" # Default robust model
-    
-    # Tiered Memory Logic
+    models = ["gemini-1.5-flash", "gemini-1.5-pro"]
     memory_context = ""
     if report_type == "Weekly":
-        memory_context = "HISTORICAL CONTEXT (Past 7 Days Daily Summaries):\n" + get_history_context("daily", 7)
+        memory_context = "CONTEXT (Past Daily): " + get_history_context("daily", 7)
     elif report_type == "Monthly":
-        memory_context = "HISTORICAL CONTEXT (Past 4 Weeks Weekly Summaries):\n" + get_history_context("weekly", 4)
+        memory_context = "CONTEXT (Past Weekly): " + get_history_context("weekly", 4)
 
     prompt = f"""
-    You are a Senior Portfolio Strategist specializing in the Pakistan Stock Exchange.
-    TASK: Generate a {report_type} Portfolio Analysis for a client focused on '{strategy}'.
-    
+    You are a Senior Portfolio Strategist (PSX Expert).
+    TASK: {report_type} Analysis focused on 'Loss Recovery to Profit' then 'Portfolio Growth'.
     {memory_context}
-    
-    CURRENT PORTFOLIO DATA:
-    {portfolio_data}
-    
+    DATA: {portfolio_data}
     REQUIREMENTS:
-    1. For EACH account (RSL, MMK, SPK, SFEL):
-       - Brief Technical Review of major holdings.
-       - A concise 'Closing Note' for that account.
-       - Specific Trade Ideas: Should the user BUY more (Average Down), HOLD, or SELL (to move funds elsewhere)?
-    
-    2. CONSOLIDATED SUMMARY (Detailed):
-       - Overall performance vs market trend.
-       - SUGGESTION FOR LOSS RECOVERY: Based on your analysis of all symbols, identify the top 3 moves to reach 'Profit' as early as possible.
-       - Explicitly suggest if a weak symbol should be sold to average down a stronger, high-potential symbol (Strength-based Recovery).
-    
-    Tone: Professional, aggressive towards recovery, but data-driven.
-    Output: Professional Markdown.
+    1. Status for each account (Recovery or Growth phase).
+    2. Recovery actions for losing positions using technical methodology (indicators, EMAs).
+    3. Trade recommendations (Buy/Sell/Hold).
     """
 
-    try:
-        response = client.models.generate_content(model=model, contents=prompt)
-        report = response.text
-        
-        # Save a condensed summary for next tier memory
-        summary_prompt = f"Summarize this portfolio report into 3 bullet points for historical memory: {report}"
-        summary_res = client.models.generate_content(model=model, contents=summary_prompt)
-        save_summary(report_type.lower(), datetime.datetime.now().strftime("%Y-%m-%d"), summary_res.text)
-        
-        return report
-    except Exception as e:
-        return f"Analysis Failed: {str(e)}"
+    for model_name in models:
+        try:
+            response = client.models.generate_content(model=model_name, contents=prompt)
+            report = response.text
+            save_summary(report_type.lower(), datetime.datetime.now().strftime("%Y-%m-%d"), report[:500] + "...")
+            return report
+        except Exception as e:
+            if "429" in str(e): continue
+            return f"Analysis Failed: {str(e)}"
+    return "AI Analysis is currently unavailable due to quota limits."
 
 def analyze_with_ai_v2(symbol, timeframe, indicator_data):
-    # (Existing single-stock logic kept for specific chart views)
+    # Background analysis for indicators, used by other functions
     client = get_ai_client()
     if not client: return "Error: API Key missing."
-    
-    prompt = f"Analyze {symbol} ({timeframe}): {indicator_data}. Focus on trend strength and immediate buy/sell suggestion for loss recovery."
+    prompt = f"Background Technical Analysis for {symbol} ({timeframe}): {indicator_data}. Focus on recovery strategy."
     try:
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
         return response.text
-    except Exception as e:
-        return f"Error: {e}"
+    except: return "Analysis background task paused (Quota)."

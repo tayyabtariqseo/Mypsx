@@ -2,31 +2,36 @@ import os
 import json
 import datetime
 
-CACHE_DIR = "analysis"
+# Baseline file to store "Day 0" values
+BASELINE_FILE = "analysis/portfolio_baseline.json"
 
-if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR)
+def get_pkt_time():
+    return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
 
-def get_cache_path(symbol):
-    """Generates the file path for today's cache for a given symbol."""
-    today = datetime.date.today().strftime("%Y-%m-%d")
-    return os.path.join(CACHE_DIR, f"{symbol}_{today}.json")
+def get_baseline():
+    if os.path.exists(BASELINE_FILE):
+        with open(BASELINE_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_baseline(data):
+    os.makedirs("analysis", exist_ok=True)
+    # Only save if not already exists (preserving Day 0) or if explicitly resetting
+    with open(BASELINE_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
 
 def load_cached_analysis(symbol):
-    """Loads today's analysis from the file cache if it exists."""
-    path = get_cache_path(symbol)
+    path = f"analysis/{symbol}_latest.json"
     if os.path.exists(path):
         try:
             with open(path, 'r') as f:
                 return json.load(f)
-        except Exception as e:
-            print(f"Error loading cache for {symbol}: {e}")
-            return None
+        except: return None
     return None
 
 def save_analysis(symbol, timeframe, indicator_data, report):
-    """Saves the AI report and indicator data to a file-based cache."""
-    path = get_cache_path(symbol)
+    os.makedirs("analysis", exist_ok=True)
+    path = f"analysis/{symbol}_latest.json"
     data = {
         "symbol": symbol,
         "date": datetime.date.today().strftime("%Y-%m-%d"),
@@ -35,10 +40,5 @@ def save_analysis(symbol, timeframe, indicator_data, report):
         "report": report,
         "timestamp": datetime.datetime.now().isoformat()
     }
-    try:
-        with open(path, 'w') as f:
-            json.dump(data, f, indent=4)
-        return True
-    except Exception as e:
-        print(f"Error saving cache for {symbol}: {e}")
-        return False
+    with open(path, 'w') as f:
+        json.dump(data, f, indent=4)

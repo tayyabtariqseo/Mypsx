@@ -1,23 +1,22 @@
-# PSX-AI Stock Analyzer - Full Work Log (May 8, 2026)
+# PSX Portfolio Recovery Engine - Full Work Log (May 9, 2026)
 
-## Current Status: App Live and Fully Functional.
+## Current Status: System Optimized for Recovery Tracking.
 
-### 1. Daily Progress (May 8):
-- **📈 Analysis Update:** SYS CMP at 154.10. Technical score 80/100 (Strong Bullish).
-- **🚀 AI Report:** Generated latest technical analysis report for SYS.
-- **🔧 Deployment Fix:** Resolved a critical build error where Streamlit defaulted to Python 3.14. Created `.python-version` and updated `runtime.txt` to lock the environment to Python 3.12.
+### 1. Scope Realignment:
+- **Core Goal:** Recovery of all 4 accounts (RSL, MMK, SPK, SFEL) to profitability.
+- **Removed Features:** Individual stock analysis tabs and trading calls tracker have been removed from the UI to focus the user experience.
+- **Background Intelligence:** Technical analysis (indicators, pivots, EMAs) remains in the code but is used exclusively by the AI to generate recovery strategies.
 
-### 2. Deployment Details:
-- **Repository:** `tayyabtariqseo/Mypsx`
-- **Main File:** `streamlit_app.py`
-- **Python Version:** 3.12 (Forced)
-- **Status:** User confirmed "working fine".
+### 2. Implementation of Growth Tracker:
+- **Day 0 (May 9, 2026):** Baseline established for total account values.
+- **Percentage Tracking:** Starting Day 1, the app will display growth/loss as a percentage against the Day 0 baseline (e.g., +5.6% Growth).
+- **Manual Reset:** Provided a "Set Day 0 Baseline" button in the sidebar for the user to initialize or reset tracking.
 
-### 3. Code State:
-- `streamlit_app.py`: Primary Portfolio Dashboard.
-- `app_v2.py`: Advanced Charting/Analysis (Available for future merge).
-- `indicators.py`: Hardened and verified.
+### 3. AI Quota & Offline Logic:
+- **Error 429 Fix:** Implemented model fallback logic in `ai_engine.py`. If one model hits a quota limit, the system automatically tries the next available model.
+- **Market Hours Compliance:** Added logic to prevent live API calls outside PKT market hours. The system now uses cached data from Friday's close for all weekend operations.
 
-### 4. Next Steps:
-- Monitor live performance.
-- Consider merging Portfolio and Technical Analysis views into a single Navigation sidebar.
+### 4. Code Changes:
+- `streamlit_app.py`: Major rewrite for the new Navigation and Dashboard structure.
+- `ai_engine.py`: Added model rotation and recovery-focused prompt engineering.
+- `persistence.py`: Added baseline management and pkt_time helpers.
