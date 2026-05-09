@@ -105,7 +105,13 @@ def analyze_portfolio_tiered(report_type, portfolio_data):
         try:
             response = client.models.generate_content(model=model_name, contents=prompt)
             report = response.text
-            save_summary(report_type.lower(), datetime.datetime.now().strftime("%Y-%m-%d"), report[:500])
+            if not report:
+                continue # Try next model if response is empty
+            
+            # Safe summary saving
+            summary_data = report[:500] if len(report) > 500 else report
+            save_summary(report_type.lower(), datetime.datetime.now().strftime("%Y-%m-%d"), summary_data)
+            
             return f"**Active Model:** `{model_name}`\n\n{report}"
         except Exception as e:
             err = str(e)
