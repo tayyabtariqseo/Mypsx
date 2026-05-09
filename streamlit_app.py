@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from indicators import get_live_price, get_psx_data, calculate_indicators, get_company_info
 from ai_engine import analyze_portfolio_tiered, ask_ai_question, get_qa_history, save_qa_history
-from persistence import get_baseline, save_baseline, get_pkt_time, load_limits
+from persistence import get_baseline, save_baseline, get_pkt_time, load_limits, get_cached_report
 import datetime
 import os
 import json
@@ -16,9 +16,8 @@ st.set_page_config(page_title="Portfolio Management System", layout="wide")
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'ai_report' not in st.session_state: st.session_state.ai_report = ""
 if 'report_task' not in st.session_state: st.session_state.report_task = None
-if 'price_sync_done' not in st.session_state: st.session_state.price_sync_done = False
 
-# Sidebar
+# Sidebar - Administration
 st.sidebar.title("Management Console")
 if not st.session_state.logged_in:
     pin = st.sidebar.text_input("PIN", type="password")
@@ -33,7 +32,7 @@ else:
 st.sidebar.header("Navigation")
 page = st.sidebar.radio("View", ["Recovery Dashboard", "Growth Tracker", "Portfolio Editor", "AI Strategy"])
 
-theme_choice = st.sidebar.radio("Theme", options=["Dark", "Light"], index=0)
+theme_choice = st.sidebar.radio("Appearance", options=["Dark", "Light"], index=0)
 if theme_choice == "Dark":
     bg, txt, card, acc, neg = "#0e1117", "#E0E0E0", "#1e1e1e", "#26a69a", "#ef5350"
 else:
@@ -85,7 +84,6 @@ def sync_all_prices(symbols):
             s, res = f.result()
             if res: price_map[s] = res['price']
     if mkt_open: save_persistent_prices(price_map)
-    st.session_state.price_sync_done = True
     return price_map
 
 @st.cache_data(ttl=600)
@@ -108,12 +106,12 @@ portfolio_files = {"RAFI (RSL)": "RSL.txt", "MMK": "MMK.txt", "SPK": "SPK.txt", 
 if page == "Recovery Dashboard":
     st.header("Portfolio Recovery Dashboard")
     mkt_open = is_market_open()
-    st.sidebar.info(f"Market: {'OPEN' if mkt_open else 'CLOSED'}\nPKT: {get_pkt_time().strftime('%H:%M')}")
+    st.sidebar.info(f"Market Status: {'OPEN' if mkt_open else 'CLOSED'}\nPKT: {get_pkt_time().strftime('%H:%M')}")
     
-    selected_accounts = st.sidebar.multiselect("Accounts", options=list(portfolio_files.keys()), default=list(portfolio_files.keys()))
+    selected_accounts = st.sidebar.multiselect("Select Accounts", options=list(portfolio_files.keys()), default=list(portfolio_files.keys()))
     
     if not selected_accounts:
-        st.info("Select accounts to monitor recovery.")
+        st.info("Select accounts in the sidebar.")
     else:
         all_rows = []
         for acc in selected_accounts:
@@ -159,11 +157,11 @@ if page == "Recovery Dashboard":
                 
                 t1, t2, t3 = st.columns(3)
                 if st.session_state.logged_in:
-                    t1.metric("Account Invested (PKR)", f"{i:,.0f}")
-                    t2.metric("Account Value (PKR)", f"{c:,.0f}")
-                    t3.metric("Account P/L (PKR)", f"{c-i:,.0f}", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
+                    t1.metric("Acc Invested (PKR)", f"{i:,.0f}")
+                    t2.metric("Acc Value (PKR)", f"{c:,.0f}")
+                    t3.metric("Acc P/L (PKR)", f"{c-i:,.0f}", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
                 else:
-                    t3.metric("Account P/L%", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
+                    t3.metric("Acc P/L%", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
             
             st.divider()
             st.markdown("### Consolidated Portfolio Summary")
@@ -203,7 +201,7 @@ elif page == "Growth Tracker":
                 st.rerun()
         
         if not baseline:
-            st.warning("No Baseline set. Administrator must login to set Day 0 Baseline.")
+            st.warning("No Baseline set. Admin must login to set Day 0 Baseline.")
         else:
             rows = []
             for acc in portfolio_files.keys():
@@ -241,25 +239,25 @@ elif page == "Portfolio Editor":
         if st.button("Save locally"):
             with open(f_path, 'w', encoding='utf-8') as f: f.write(edit_content)
             st.cache_data.clear()
-            st.success("Saved.")
+            st.success("Saved locally.")
 
 elif page == "AI Strategy":
     st.header("Institutional AI Strategy")
     if not st.session_state.logged_in:
         st.warning("Login required.")
     else:
-        # Rate Limit Timer
+        # 1. Rate Limit & Cooldown Logic
         limits = load_limits()
         max_wait = 0
         for m, t in limits.items():
             if time.time() < t: max_wait = max(max_wait, int(t - time.time()))
         
         if max_wait > 0:
-            st.warning(f"AI Cooldown: Resuming in {max_wait} seconds.")
+            st.warning(f"AI Cooldown: Retrying in {max_wait} seconds. All models currently exhausted.")
             time.sleep(1)
             st.rerun()
 
-        # Gather grouped data for AI (using already synced prices)
+        # 2. Data Preparation (Grouped by Account, with freshest prices)
         price_map = get_persistent_prices()
         grouped_portfolio = {}
         for label, file in portfolio_files.items():
@@ -267,42 +265,58 @@ elif page == "AI Strategy":
             for r in rows: r['CMP'] = price_map.get(r['Symbol'], 0)
             grouped_portfolio[label] = rows
 
+        # 3. Strategic Report Buttons
         c1, c2 = st.columns(2)
-        if c1.button("Daily Recovery Report"): st.session_state.report_task = "Daily"
-        if c2.button("Weekly Recovery Plan"): st.session_state.report_task = "Weekly"
+        if c1.button("Daily Recovery Report"): 
+            st.session_state.report_task = "Daily"
+            st.session_state.ai_report = "" # Clear old report
+        if c2.button("Weekly Recovery Plan"): 
+            st.session_state.report_task = "Weekly"
+            st.session_state.ai_report = ""
 
+        # 4. Background Task Execution
         if st.session_state.report_task:
-            with st.spinner(f"Generating {st.session_state.report_task} Institutional Analysis..."):
-                res = analyze_portfolio_tiered(st.session_state.report_task, grouped_portfolio)
-                if res.startswith("RATE_LIMIT"):
-                    st.error(f"Quota exceeded. {res.replace('RATE_LIMIT:', '')}. Retrying...")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.session_state.ai_report = res
-                    st.session_state.report_task = None # Task complete
+            task = st.session_state.report_task
+            # Check for recent cache first to avoid API hit
+            cached = get_cached_report(task)
+            if cached:
+                st.session_state.ai_report = f"**System Note:** Displaying cached analysis (Refreshed within last hour).\n\n{cached}"
+                st.session_state.report_task = None
+            else:
+                with st.spinner(f"Generating {task} Institutional Portfolio Analysis..."):
+                    res = analyze_portfolio_tiered(task, grouped_portfolio)
+                    if res.startswith("RATE_LIMIT"):
+                        st.error(f"Quota exceeded across all high-priority models. Initializing 120s cooldown...")
+                        # mark all models exhausted just in case rotation missed one
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.session_state.ai_report = res
+                        st.session_state.report_task = None
         
         if st.session_state.ai_report:
             st.markdown(st.session_state.ai_report)
 
         st.divider()
-        q = st.text_input("Institutional Inquiry (Recovery Focus)")
+        # 5. Q&A Inquiry
+        q = st.text_input("Institutional Inquiry (Account Recovery focus)")
         if st.button("Query AI"):
             if q:
-                with st.spinner("Senior Analyst Thinking..."):
+                with st.spinner("Senior Analyst Analysis..."):
                     res = ask_ai_question(q, grouped_portfolio)
                     if res.startswith("RATE_LIMIT"):
-                        st.error("Quota exceeded. Retrying...")
+                        st.error("Quota exceeded. Initiating cooldown...")
                         time.sleep(1)
                         st.rerun()
                     else: 
                         st.markdown(res)
+                        # Extract model name
                         model_name = res.split('`')[1] if '`' in res else 'Unknown'
                         save_qa_history(q, res.split('\n\n')[1] if '\n\n' in res else res, model_name)
         
         hist = get_qa_history()
         if hist:
-            with st.expander("Strategy Inquiry History"):
+            with st.expander("Strategic Inquiry History"):
                 for item in reversed(hist):
                     st.markdown(f"**Q:** {item['question']}\n**A:** {item['answer']}")
                     st.divider()
