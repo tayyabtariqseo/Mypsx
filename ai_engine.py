@@ -13,11 +13,17 @@ def get_ai_client():
             import streamlit as st
             api_key = st.secrets.get("GOOGLE_API_KEY")
         except: pass
+    
+    # User's provided key (Note: It was reported as leaked in logs, consider replacing)
     if not api_key:
         api_key = "AIzaSyDqRH_N12GpkxGoaN2AHXP7l3-KcVfdm9g"
+    
     if not api_key:
         return None
-    return genai.Client(api_key=api_key)
+    try:
+        return genai.Client(api_key=api_key)
+    except:
+        return None
 
 def save_summary(type, date_str, data):
     path = f"analysis/summaries_{type}.json"
@@ -36,7 +42,7 @@ def get_history_context(type, days=7):
     for d in sorted_dates[:days]: context += f"\nDate {d}: {history[d]}\n"
     return context
 
-def save_qa_history(question, answer):
+def save_qa_history(question, answer, model_name):
     path = "analysis/qa_history.json"
     history = []
     if os.path.exists(path):
@@ -44,7 +50,7 @@ def save_qa_history(question, answer):
     history.append({
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "question": question,
-        "answer": answer
+        "answer": f"[Model: {model_name}]\n{answer}"
     })
     if len(history) > 20: history = history[-20:]
     with open(path, 'w') as f: json.dump(history, f)
@@ -56,38 +62,40 @@ def get_qa_history():
 
 def ask_ai_question(question, portfolio_context):
     client = get_ai_client()
-    if not client: return "Error: API Key missing."
+    if not client: return "Error: API Key missing or invalid."
     
-    # Priority rotation to avoid 429 on free tier
-    models = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"]
+    # Prioritize highest version first
+    models = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
     
     prompt = f"""
     Portfolio Context: {portfolio_context}
     User Question: {question}
     
     Role: Senior Portfolio Recovery Expert for Pakistan Stock Exchange.
-    Instructions: 
-    - Focus on loss recovery until accounts are profitable, then shift to growth.
-    - Provide actionable, professional advice.
-    - If data suggests a stock is weak, suggest recovery paths (averaging, switching, or holding).
+    Instructions: Focus on recovery until profitable, then growth.
     """
 
     for model_name in models:
         try:
             response = client.models.generate_content(model=model_name, contents=prompt)
             answer = response.text
-            save_qa_history(question, answer)
-            return answer
+            save_qa_history(question, answer, model_name)
+            return f"**Active Model:** `{model_name}`\n\n{answer}"
         except Exception as e:
-            if "429" in str(e): continue
-            return f"Query Failed: {str(e)}"
-    return "AI is temporarily busy (Quota Limit). Please retry in 1 minute."
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                continue # Try next model
+            if "404" in err_msg or "NOT_FOUND" in err_msg:
+                continue # Try next model (sometimes naming differs)
+            return f"Query Failed with `{model_name}`: {err_msg}"
+            
+    return "AI Quota Exceeded across all models (2.0 Flash, 1.5 Pro, 1.5 Flash). Please wait 1 minute. (Note: Free tier has strict per-minute limits)."
 
 def analyze_portfolio_tiered(report_type, portfolio_data):
     client = get_ai_client()
-    if not client: return "Error: API Key missing."
+    if not client: return "Error: API Key missing or invalid."
 
-    models = ["gemini-1.5-flash", "gemini-1.5-pro"]
+    models = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
     memory_context = ""
     if report_type == "Weekly":
         memory_context = "CONTEXT (Past Daily): " + get_history_context("daily", 7)
@@ -99,29 +107,15 @@ def analyze_portfolio_tiered(report_type, portfolio_data):
     TASK: {report_type} Analysis focused on 'Loss Recovery to Profit' then 'Portfolio Growth'.
     {memory_context}
     DATA: {portfolio_data}
-    REQUIREMENTS:
-    1. Status for each account (Recovery or Growth phase).
-    2. Recovery actions for losing positions using technical methodology (indicators, EMAs).
-    3. Trade recommendations (Buy/Sell/Hold).
     """
 
     for model_name in models:
         try:
             response = client.models.generate_content(model=model_name, contents=prompt)
             report = response.text
-            save_summary(report_type.lower(), datetime.datetime.now().strftime("%Y-%m-%d"), report[:500] + "...")
-            return report
+            save_summary(report_type.lower(), datetime.datetime.now().strftime("%Y-%m-%d"), report[:500])
+            return f"**Active Model:** `{model_name}`\n\n{report}"
         except Exception as e:
-            if "429" in str(e): continue
-            return f"Analysis Failed: {str(e)}"
-    return "AI Analysis is currently unavailable due to quota limits."
-
-def analyze_with_ai_v2(symbol, timeframe, indicator_data):
-    # Background analysis for indicators, used by other functions
-    client = get_ai_client()
-    if not client: return "Error: API Key missing."
-    prompt = f"Background Technical Analysis for {symbol} ({timeframe}): {indicator_data}. Focus on recovery strategy."
-    try:
-        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
-        return response.text
-    except: return "Analysis background task paused (Quota)."
+            if "429" in str(e) or "404" in str(e): continue
+            return f"Analysis Failed with `{model_name}`: {str(e)}"
+    return "AI Analysis Quota Exceeded. Please retry in a moment."

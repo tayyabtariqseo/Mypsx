@@ -147,24 +147,31 @@ if page == "Recovery Dashboard":
                 if not st.session_state.logged_in: del fmt["Invested"], fmt["P/L"]
                 
                 st.table(disp.style.format(fmt).map(s_pl, subset=['P/L', 'P/L%'] if st.session_state.logged_in else ['P/L%']))
+                
+                # Account Total Summary
+                t1, t2, t3 = st.columns(3)
+                if st.session_state.logged_in:
+                    t1.metric("Acc Invested", f"{i:,.0f}")
+                    t2.metric("Acc Value", f"{c:,.0f}")
+                    t3.metric("Acc P/L", f"{c-i:,.0f}", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
+                else:
+                    t3.metric("Acc P/L%", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
             
             st.divider()
-            st.markdown("### 💰 Consolidated Strategy View")
+            st.markdown("### 💰 Consolidated Portfolio Summary")
             ti, tc = grand_total_invested, grand_total_current
             s1, s2, s3 = st.columns(3)
             if st.session_state.logged_in:
-                s1.metric("Total Invested", f"{ti:,.0f}")
-                s2.metric("Market Value", f"{tc:,.0f}")
-                s3.metric("Unrealized P/L", f"{tc-ti:,.0f}", f"{(tc-ti)/ti*100 if ti>0 else 0:.1f}%")
+                s1.metric("Grand Total Invested", f"{ti:,.0f}")
+                s2.metric("Grand Market Value", f"{tc:,.0f}")
+                s3.metric("Grand Portfolio P/L", f"{tc-ti:,.0f}", f"{(tc-ti)/ti*100 if ti>0 else 0:.1f}%")
             else:
                 s3.metric("Total Portfolio P/L%", f"{(tc-ti)/ti*100 if ti>0 else 0:.1f}%")
 
 elif page == "Growth Tracker":
     st.header("📈 Growth Tracker (Post Day 0)")
     baseline = get_baseline()
-    
-    # Implementation of Growth Tracking vs Day 0
-    st.info("Tracking growth from May 9, 2026 (Day 0). Each account shows growth relative to the baseline value.")
+    st.info("Tracking growth from May 9, 2026 (Day 0). Baseline is established on this date.")
     
     all_data = []
     for acc, f in portfolio_files.items():
@@ -179,12 +186,13 @@ elif page == "Growth Tracker":
         
         acc_growth = df_all.groupby('Account')['Current'].sum().to_dict()
         
-        if st.sidebar.button("Set Day 0 Baseline"):
-            save_baseline(acc_growth)
-            st.rerun()
+        if st.session_state.logged_in:
+            if st.sidebar.button("Set Day 0 Baseline"):
+                save_baseline(acc_growth)
+                st.rerun()
         
         if not baseline:
-            st.warning("No Baseline set. Click 'Set Day 0 Baseline' to start tracking.")
+            st.warning("No Baseline set. Admin must login to set Day 0 Baseline.")
         else:
             rows = []
             for acc in portfolio_files.keys():
@@ -192,16 +200,29 @@ elif page == "Growth Tracker":
                 c_val = acc_growth.get(acc, 0)
                 diff = c_val - b_val
                 perc = (diff / b_val * 100) if b_val > 0 else 0
-                rows.append({"Account": acc, "Baseline (Day 0)": b_val, "Current Value": c_val, "Growth (%)": perc})
-            
+                
+                if st.session_state.logged_in:
+                    rows.append({"Account": acc, "Baseline (Day 0)": b_val, "Current Value": c_val, "Growth (%)": perc})
+                else:
+                    rows.append({"Account": acc, "Baseline": "***", "Current": "***", "Growth (%)": perc})
+
             df_growth = pd.DataFrame(rows)
-            st.table(df_growth.style.format({"Baseline (Day 0)": "{:,.0f}", "Current Value": "{:,.0f}", "Growth (%)": "{:+.2f}%"}))
+            fmt_g = {"Growth (%)": "{:+.2f}%"}
+            if st.session_state.logged_in:
+                fmt_g.update({"Baseline (Day 0)": "{:,.0f}", "Current Value": "{:,.0f}"})
             
-            # Summary Metric
+            st.table(df_growth.style.format(fmt_g))
+            
+            # Consolidated Summary
             total_b = sum(baseline.values())
             total_c = sum(acc_growth.values())
             total_perc = ((total_c - total_b) / total_b * 100) if total_b > 0 else 0
-            st.metric("Consolidated Growth Since Day 0", f"{total_c:,.0f}", f"{total_perc:+.2f}%")
+            
+            st.divider()
+            if st.session_state.logged_in:
+                st.metric("Consolidated Portfolio Growth", f"{total_c:,.0f}", f"{total_perc:+.2f}%")
+            else:
+                st.metric("Consolidated Portfolio Growth (%)", f"{total_perc:+.2f}%")
 
 elif page == "Portfolio Editor":
     st.header("✍️ Editor")
