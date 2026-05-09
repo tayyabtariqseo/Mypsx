@@ -1,44 +1,42 @@
+import time
 import os
 import json
 import datetime
 
-# Baseline file to store "Day 0" values
-BASELINE_FILE = "analysis/portfolio_baseline.json"
+# Global trackers for rate limits (persisted in session_state usually, but using file for reliability across reloads)
+LIMITS_FILE = "analysis/ai_limits.json"
 
 def get_pkt_time():
     return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
 
+def load_limits():
+    if os.path.exists(LIMITS_FILE):
+        try:
+            with open(LIMITS_FILE, 'r') as f: return json.load(f)
+        except: return {}
+    return {}
+
+def save_limits(limits):
+    os.makedirs("analysis", exist_ok=True)
+    with open(LIMITS_FILE, 'w') as f: json.dump(limits, f)
+
+def mark_model_exhausted(model_name, duration_sec=60):
+    limits = load_limits()
+    limits[model_name] = time.time() + duration_sec
+    save_limits(limits)
+
+def is_model_available(model_name):
+    limits = load_limits()
+    if model_name in limits:
+        if time.time() < limits[model_name]:
+            return False, int(limits[model_name] - time.time())
+    return True, 0
+
 def get_baseline():
-    if os.path.exists(BASELINE_FILE):
-        with open(BASELINE_FILE, 'r') as f:
-            return json.load(f)
+    if os.path.exists("analysis/portfolio_baseline.json"):
+        with open("analysis/portfolio_baseline.json", 'r') as f: return json.load(f)
     return {}
 
 def save_baseline(data):
     os.makedirs("analysis", exist_ok=True)
-    # Only save if not already exists (preserving Day 0) or if explicitly resetting
-    with open(BASELINE_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-
-def load_cached_analysis(symbol):
-    path = f"analysis/{symbol}_latest.json"
-    if os.path.exists(path):
-        try:
-            with open(path, 'r') as f:
-                return json.load(f)
-        except: return None
-    return None
-
-def save_analysis(symbol, timeframe, indicator_data, report):
-    os.makedirs("analysis", exist_ok=True)
-    path = f"analysis/{symbol}_latest.json"
-    data = {
-        "symbol": symbol,
-        "date": datetime.date.today().strftime("%Y-%m-%d"),
-        "timeframe": timeframe,
-        "indicator_data": indicator_data,
-        "report": report,
-        "timestamp": datetime.datetime.now().isoformat()
-    }
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=4)
+    with open("analysis/portfolio_baseline.json", 'w') as f: json.dump(data, f, indent=4)

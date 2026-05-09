@@ -2,18 +2,18 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from indicators import get_live_price, get_psx_data, calculate_indicators, get_company_info
-from ai_engine import analyze_portfolio_tiered, ask_ai_question, get_qa_history
-from persistence import get_baseline, save_baseline, get_pkt_time
+from ai_engine import analyze_portfolio_tiered, ask_ai_question, get_qa_history, save_qa_history
+from persistence import get_baseline, save_baseline, get_pkt_time, load_limits
 import datetime
 import os
 import json
+import time
 import concurrent.futures
 
 # 1. THEME & GLOBAL UI STYLING
 st.set_page_config(page_title="PSX Portfolio Recovery Engine", layout="wide")
 
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
-if 'gh_token' not in st.session_state: st.session_state.gh_token = ""
 if 'ai_report' not in st.session_state: st.session_state.ai_report = ""
 
 # Sidebar - Admin
@@ -148,7 +148,6 @@ if page == "Recovery Dashboard":
                 
                 st.table(disp.style.format(fmt).map(s_pl, subset=['P/L', 'P/L%'] if st.session_state.logged_in else ['P/L%']))
                 
-                # Account Total Summary
                 t1, t2, t3 = st.columns(3)
                 if st.session_state.logged_in:
                     t1.metric("Acc Invested", f"{i:,.0f}")
@@ -213,7 +212,6 @@ elif page == "Growth Tracker":
             
             st.table(df_growth.style.format(fmt_g))
             
-            # Consolidated Summary
             total_b = sum(baseline.values())
             total_c = sum(acc_growth.values())
             total_perc = ((total_c - total_b) / total_b * 100) if total_b > 0 else 0
@@ -246,11 +244,30 @@ elif page == "AI Recovery Strategy":
         all_data = []
         for f in portfolio_files.values(): all_data.extend(parse_portfolio_file(f))
         
+        # Rate Limit Timer Section
+        limits = load_limits()
+        max_wait = 0
+        for m, t in limits.items():
+            if time.time() < t:
+                max_wait = max(max_wait, int(t - time.time()))
+        
+        if max_wait > 0:
+            st.warning(f"🕒 AI cooldown in progress... Resuming in {max_wait} seconds.")
+            time.sleep(1)
+            st.rerun()
+
         c1, c2 = st.columns(2)
         if c1.button("Analyze Portfolio"): 
-            st.session_state.ai_report = analyze_portfolio_tiered("Daily", all_data)
+            with st.spinner("AI Analysis..."):
+                res = analyze_portfolio_tiered("Daily", all_data)
+                if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
+                else: st.session_state.ai_report = res
+        
         if c2.button("Weekly Recovery Plan"):
-            st.session_state.ai_report = analyze_portfolio_tiered("Weekly", all_data)
+            with st.spinner("AI Planning..."):
+                res = analyze_portfolio_tiered("Weekly", all_data)
+                if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
+                else: st.session_state.ai_report = res
         
         if st.session_state.ai_report:
             st.markdown(st.session_state.ai_report)
@@ -259,12 +276,18 @@ elif page == "AI Recovery Strategy":
         q = st.text_input("Ask about Recovery/Growth...")
         if st.button("Ask AI"):
             if q:
-                with st.spinner("Thinking..."):
-                    st.markdown(ask_ai_question(q, all_data))
+                with st.spinner("Expert Thinking..."):
+                    res = ask_ai_question(q, all_data)
+                    if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
+                    else: 
+                        st.markdown(res)
+                        # Extract model name for history
+                        model_name = res.split('`')[1] if '`' in res else 'Unknown'
+                        save_qa_history(q, res.split('\n\n')[1] if '\n\n' in res else res, model_name)
         
         hist = get_qa_history()
         if hist:
-            with st.expander("📜 History"):
+            with st.expander("📜 Strategy History"):
                 for item in reversed(hist):
                     st.markdown(f"**Q:** {item['question']}\n**A:** {item['answer']}")
                     st.divider()

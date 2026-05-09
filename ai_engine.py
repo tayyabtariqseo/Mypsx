@@ -2,7 +2,9 @@ from google import genai
 import os
 import datetime
 import json
+import time
 from dotenv import load_dotenv
+from persistence import mark_model_exhausted, is_model_available
 
 load_dotenv()
 
@@ -13,108 +15,99 @@ def get_ai_client():
             import streamlit as st
             api_key = st.secrets.get("GOOGLE_API_KEY")
         except: pass
-    
     if not api_key:
         api_key = "AIzaSyCHAKoDciqo4WZoXkbmA0nVMRRU6I9J3RA"
+    if not api_key: return None
+    try: return genai.Client(api_key=api_key)
+    except: return None
+
+def deduplicate_portfolio(portfolio_data):
+    """Aggregates holdings by symbol to reduce AI input size and avoid redundant analysis."""
+    dedup = {}
+    for item in portfolio_data:
+        sym = item['Symbol']
+        if sym not in dedup:
+            dedup[sym] = {"Qty": 0, "AvgPrice": 0, "Count": 0}
+        dedup[sym]["Qty"] += item["Qty"]
+        dedup[sym]["AvgPrice"] += item["Avg Price"]
+        dedup[sym]["Count"] += 1
     
-    if not api_key:
-        return None
+    # Finalize averages
+    for sym in dedup:
+        dedup[sym]["AvgPrice"] /= dedup[sym]["Count"]
+        del dedup[sym]["Count"]
+    return dedup
+
+def ask_ai_question(question, portfolio_data):
+    client = get_ai_client()
+    if not client: return "Error: API Key missing."
+    
+    compact_data = deduplicate_portfolio(portfolio_data)
+    models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-flash-latest", "gemini-pro-latest"]
+    
+    prompt = f"""
+    ROLE: Senior Financial Analyst & Portfolio Strategist (PSX Expert).
+    CONTEXT: {compact_data}
+    USER QUERY: {question}
+    INSTRUCTION: Provide a data-driven, professional analysis. Avoid generic filler. Focus on recovery and strategic alpha.
+    """
+
+    for model_name in models:
+        avail, wait_time = is_model_available(model_name)
+        if not avail: continue
+
+        try:
+            response = client.models.generate_content(model=model_name, contents=prompt)
+            if response.text:
+                return f"**Analysis Model:** `{model_name}`\n\n{response.text}"
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                mark_model_exhausted(model_name)
+                continue
+    return "RATE_LIMIT"
+
+def analyze_portfolio_tiered(report_type, portfolio_data):
+    client = get_ai_client()
+    if not client: return "Error: API Key missing."
+
+    compact_data = deduplicate_portfolio(portfolio_data)
+    models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-pro-latest"]
+    
+    prompt = f"""
+    TASK: {report_type} Institutional Portfolio Review.
+    GOAL: Loss Recovery & Systematic Growth.
+    DATA: {compact_data}
+    REQUIREMENTS: Professional markdown, technical methodology (EMA/RSI context), actionable trade logic.
+    """
+
+    for model_name in models:
+        avail, wait_time = is_model_available(model_name)
+        if not avail: continue
+
+        try:
+            response = client.models.generate_content(model=model_name, contents=prompt)
+            if response.text:
+                return f"**Strategic Model:** `{model_name}`\n\n{response.text}"
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                mark_model_exhausted(model_name)
+                continue
+    return "RATE_LIMIT"
+
+def get_qa_history():
+    path = "analysis/qa_history.json"
+    if not os.path.exists(path): return []
     try:
-        return genai.Client(api_key=api_key)
-    except:
-        return None
-
-def save_summary(type, date_str, data):
-    path = f"analysis/summaries_{type}.json"
-    history = {}
-    if os.path.exists(path):
-        with open(path, 'r') as f: history = json.load(f)
-    history[date_str] = data
-    with open(path, 'w') as f: json.dump(history, f)
-
-def get_history_context(type, days=7):
-    path = f"analysis/summaries_{type}.json"
-    if not os.path.exists(path): return ""
-    with open(path, 'r') as f: history = json.load(f)
-    sorted_dates = sorted(history.keys(), reverse=True)
-    context = ""
-    for d in sorted_dates[:days]: context += f"\nDate {d}: {history[d]}\n"
-    return context
+        with open(path, 'r') as f: return json.load(f)
+    except: return []
 
 def save_qa_history(question, answer, model_name):
     path = "analysis/qa_history.json"
-    history = []
-    if os.path.exists(path):
-        with open(path, 'r') as f: history = json.load(f)
+    history = get_qa_history()
     history.append({
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "question": question,
         "answer": f"[Model: {model_name}]\n{answer}"
     })
-    if len(history) > 20: history = history[-20:]
+    if len(history) > 15: history = history[-15:]
     with open(path, 'w') as f: json.dump(history, f)
-
-def get_qa_history():
-    path = "analysis/qa_history.json"
-    if not os.path.exists(path): return []
-    with open(path, 'r') as f: return json.load(f)
-
-def ask_ai_question(question, portfolio_context):
-    client = get_ai_client()
-    if not client: return "Error: API Key missing or invalid."
-    
-    # Updated models based on ListModels verification
-    models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash", "gemini-pro-latest"]
-    
-    prompt = f"Portfolio Context: {portfolio_context}. User Question: {question}. Role: Senior Portfolio Recovery Expert. Focus on recovery."
-
-    for model_name in models:
-        try:
-            response = client.models.generate_content(model=model_name, contents=prompt)
-            answer = response.text
-            save_qa_history(question, answer, model_name)
-            return f"**Active Model:** `{model_name}`\n\n{answer}"
-        except Exception as e:
-            err = str(e)
-            if "429" in err or "RESOURCE_EXHAUSTED" in err:
-                # If last model also fails with 429
-                if model_name == models[-1]:
-                    return f"AI Quota Exceeded (All Models). Error with `{model_name}`: {err}"
-                continue
-            if "404" in err or "NOT_FOUND" in err:
-                continue
-            return f"Error with `{model_name}`: {err}"
-            
-    return "All AI models are currently unavailable (Quota or Connectivity)."
-
-def analyze_portfolio_tiered(report_type, portfolio_data):
-    client = get_ai_client()
-    if not client: return "Error: API Key missing or invalid."
-
-    # Updated models based on ListModels verification
-    models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-pro-latest"]
-    memory_context = ""
-    if report_type == "Weekly":
-        memory_context = "CONTEXT (Past Daily): " + get_history_context("daily", 7)
-    elif report_type == "Monthly":
-        memory_context = "CONTEXT (Past Weekly): " + get_history_context("weekly", 4)
-
-    prompt = f"TASK: {report_type} Analysis for PSX Portfolio. Goal: Recovery to Profit. {memory_context}. DATA: {portfolio_data}"
-
-    for model_name in models:
-        try:
-            response = client.models.generate_content(model=model_name, contents=prompt)
-            report = response.text
-            if not report:
-                continue # Try next model if response is empty
-            
-            # Safe summary saving
-            summary_data = report[:500] if len(report) > 500 else report
-            save_summary(report_type.lower(), datetime.datetime.now().strftime("%Y-%m-%d"), summary_data)
-            
-            return f"**Active Model:** `{model_name}`\n\n{report}"
-        except Exception as e:
-            err = str(e)
-            if "429" in err or "404" in err: continue
-            return f"Analysis Failed with `{model_name}`: {err}"
-    return "AI Analysis Quota Exceeded across all supported models. Please retry in 1 minute."
