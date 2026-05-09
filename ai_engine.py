@@ -14,9 +14,9 @@ def get_ai_client():
             api_key = st.secrets.get("GOOGLE_API_KEY")
         except: pass
     
-    # User's provided key (Note: It was reported as leaked in logs, consider replacing)
+    # 3. Direct Fallback (Provided by user for this project)
     if not api_key:
-        api_key = "AIzaSyDqRH_N12GpkxGoaN2AHXP7l3-KcVfdm9g"
+        api_key = "AIzaSyCHAKoDciqo4WZoXkbmA0nVMRRU6I9J3RA"
     
     if not api_key:
         return None
