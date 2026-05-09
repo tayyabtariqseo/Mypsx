@@ -16,6 +16,7 @@ st.set_page_config(page_title="Portfolio Management System", layout="wide")
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'ai_report' not in st.session_state: st.session_state.ai_report = ""
 if 'report_task' not in st.session_state: st.session_state.report_task = None
+if 'price_cache' not in st.session_state: st.session_state.price_cache = {}
 
 # Sidebar - Administration
 st.sidebar.title("Management Console")
@@ -74,7 +75,13 @@ def fetch_price_logic(symbol, mkt_open, stored_prices):
         return symbol, {"price": stored_prices[symbol], "timestamp": "Offline", "source": "cache"}
     return symbol, None
 
-def sync_all_prices(symbols):
+def sync_all_prices(symbols, force=False):
+    """Optimized sync using session_state to avoid duplicate API hits."""
+    if not force and st.session_state.price_cache:
+        # Check if all symbols are in cache
+        if all(s in st.session_state.price_cache for s in symbols):
+            return st.session_state.price_cache
+
     mkt_open = is_market_open()
     stored_prices = get_persistent_prices()
     price_map = {}
@@ -83,7 +90,9 @@ def sync_all_prices(symbols):
         for f in concurrent.futures.as_completed(futures):
             s, res = f.result()
             if res: price_map[s] = res['price']
+    
     if mkt_open: save_persistent_prices(price_map)
+    st.session_state.price_cache = price_map
     return price_map
 
 @st.cache_data(ttl=600)
@@ -108,6 +117,10 @@ if page == "Recovery Dashboard":
     mkt_open = is_market_open()
     st.sidebar.info(f"Market Status: {'OPEN' if mkt_open else 'CLOSED'}\nPKT: {get_pkt_time().strftime('%H:%M')}")
     
+    if st.sidebar.button("Refresh Live Prices"):
+        st.session_state.price_cache = {}
+        st.rerun()
+
     selected_accounts = st.sidebar.multiselect("Select Accounts", options=list(portfolio_files.keys()), default=list(portfolio_files.keys()))
     
     if not selected_accounts:
@@ -121,9 +134,7 @@ if page == "Recovery Dashboard":
         if all_rows:
             df_port = pd.DataFrame(all_rows)
             unique_symbols = df_port['Symbol'].unique()
-            
-            with st.spinner("Syncing Market Data..."):
-                price_map = sync_all_prices(unique_symbols)
+            price_map = sync_all_prices(unique_symbols)
             
             df_port['CMP'] = df_port['Symbol'].map(price_map).fillna(0.0)
             df_port['Invested'] = df_port['Qty'] * df_port['Avg Price']
@@ -201,7 +212,7 @@ elif page == "Growth Tracker":
                 st.rerun()
         
         if not baseline:
-            st.warning("No Baseline set. Admin must login to set Day 0 Baseline.")
+            st.warning("No Baseline set. Administrator must login to set Day 0 Baseline.")
         else:
             rows = []
             for acc in portfolio_files.keys():
@@ -246,48 +257,43 @@ elif page == "AI Strategy":
     if not st.session_state.logged_in:
         st.warning("Login required.")
     else:
-        # 1. Rate Limit & Cooldown Logic
         limits = load_limits()
         max_wait = 0
         for m, t in limits.items():
             if time.time() < t: max_wait = max(max_wait, int(t - time.time()))
         
         if max_wait > 0:
-            st.warning(f"AI Cooldown: Retrying in {max_wait} seconds. All models currently exhausted.")
+            st.warning(f"AI Cooldown: Retrying in {max_wait} seconds. All models currently reporting quota exhaustion.")
             time.sleep(1)
             st.rerun()
 
-        # 2. Data Preparation (Grouped by Account, with freshest prices)
-        price_map = get_persistent_prices()
+        # Gather grouped data for AI (using the FRESH price_cache from Dashboard)
+        price_map = st.session_state.get('price_cache', get_persistent_prices())
         grouped_portfolio = {}
         for label, file in portfolio_files.items():
             rows = parse_portfolio_file(file)
             for r in rows: r['CMP'] = price_map.get(r['Symbol'], 0)
             grouped_portfolio[label] = rows
 
-        # 3. Strategic Report Buttons
         c1, c2 = st.columns(2)
         if c1.button("Daily Recovery Report"): 
             st.session_state.report_task = "Daily"
-            st.session_state.ai_report = "" # Clear old report
+            st.session_state.ai_report = ""
         if c2.button("Weekly Recovery Plan"): 
             st.session_state.report_task = "Weekly"
             st.session_state.ai_report = ""
 
-        # 4. Background Task Execution
         if st.session_state.report_task:
             task = st.session_state.report_task
-            # Check for recent cache first to avoid API hit
             cached = get_cached_report(task)
             if cached:
-                st.session_state.ai_report = f"**System Note:** Displaying cached analysis (Refreshed within last hour).\n\n{cached}"
+                st.session_state.ai_report = f"**System Note:** Displaying cached analysis (Updated within last hour).\n\n{cached}"
                 st.session_state.report_task = None
             else:
-                with st.spinner(f"Generating {task} Institutional Portfolio Analysis..."):
+                with st.spinner(f"Generating {task} Institutional Analysis..."):
                     res = analyze_portfolio_tiered(task, grouped_portfolio)
                     if res.startswith("RATE_LIMIT"):
-                        st.error(f"Quota exceeded across all high-priority models. Initializing 120s cooldown...")
-                        # mark all models exhausted just in case rotation missed one
+                        st.error(f"Quota exceeded. System is blacklisting exhausted models. Retrying in background...")
                         time.sleep(1)
                         st.rerun()
                     else:
@@ -298,7 +304,6 @@ elif page == "AI Strategy":
             st.markdown(st.session_state.ai_report)
 
         st.divider()
-        # 5. Q&A Inquiry
         q = st.text_input("Institutional Inquiry (Account Recovery focus)")
         if st.button("Query AI"):
             if q:
@@ -310,7 +315,6 @@ elif page == "AI Strategy":
                         st.rerun()
                     else: 
                         st.markdown(res)
-                        # Extract model name
                         model_name = res.split('`')[1] if '`' in res else 'Unknown'
                         save_qa_history(q, res.split('\n\n')[1] if '\n\n' in res else res, model_name)
         
