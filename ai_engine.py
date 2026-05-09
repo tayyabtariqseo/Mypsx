@@ -21,41 +21,55 @@ def get_ai_client():
     try: return genai.Client(api_key=api_key)
     except: return None
 
-def deduplicate_portfolio(portfolio_data):
-    """Aggregates holdings by symbol to reduce AI input size and avoid redundant analysis."""
-    dedup = {}
-    for item in portfolio_data:
-        sym = item['Symbol']
-        if sym not in dedup:
-            dedup[sym] = {"Qty": 0, "AvgPrice": 0, "Count": 0}
-        dedup[sym]["Qty"] += item["Qty"]
-        dedup[sym]["AvgPrice"] += item["Avg Price"]
-        dedup[sym]["Count"] += 1
-    
-    # Finalize averages
-    for sym in dedup:
-        dedup[sym]["AvgPrice"] /= dedup[sym]["Count"]
-        del dedup[sym]["Count"]
-    return dedup
+def deduplicate_portfolio_by_account(portfolio_dict):
+    """Groups holdings by account and symbol to optimize tokens while preserving account separation."""
+    structured_data = {}
+    for acc_name, holdings in portfolio_dict.items():
+        acc_summary = {}
+        for item in holdings:
+            sym = item['Symbol']
+            if sym not in acc_summary:
+                acc_summary[sym] = {"Qty": 0, "AvgPrice": 0, "CMP": item.get('CMP', 0), "Count": 0}
+            acc_summary[sym]["Qty"] += item["Qty"]
+            acc_summary[sym]["AvgPrice"] += item["Avg Price"]
+            acc_summary[sym]["Count"] += 1
+        
+        # Finalize averages for the account
+        for sym in acc_summary:
+            acc_summary[sym]["AvgPrice"] /= acc_summary[sym]["Count"]
+            del acc_summary[sym]["Count"]
+        structured_data[acc_name] = acc_summary
+    return structured_data
 
-def ask_ai_question(question, portfolio_data):
+def ask_ai_question(question, portfolio_dict):
     client = get_ai_client()
     if not client: return "Error: API Key missing."
     
-    compact_data = deduplicate_portfolio(portfolio_data)
+    compact_data = deduplicate_portfolio_by_account(portfolio_dict)
     models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-flash-latest", "gemini-pro-latest"]
     
+    today_str = datetime.datetime.now().strftime("%B %d, %Y")
+    
     prompt = f"""
-    ROLE: Senior Financial Analyst & Portfolio Strategist (PSX Expert).
-    CONTEXT: {compact_data}
+    TODAY'S DATE: {today_str}
+    CURRENCY: All values are in PKR (Pakistani Rupee).
+    ROLE: Senior Institutional Portfolio Manager & PSX Expert.
+    
+    CONTEXT (Portfolios by Account):
+    {json.dumps(compact_data, indent=2)}
+    
     USER QUERY: {question}
-    INSTRUCTION: Provide a data-driven, professional analysis. Avoid generic filler. Focus on recovery and strategic alpha.
+    
+    STRICT INSTRUCTIONS:
+    1. Use the EXACT prices (CMP) provided. Never assume or invent "Current Prices".
+    2. Deal with each account as a separate portfolio.
+    3. Provide professional, data-driven analysis focused on loss recovery.
+    4. Do not use '$' symbols. Use 'PKR' or no symbol.
     """
 
     for model_name in models:
-        avail, wait_time = is_model_available(model_name)
+        avail, _ = is_model_available(model_name)
         if not avail: continue
-
         try:
             response = client.models.generate_content(model=model_name, contents=prompt)
             if response.text:
@@ -66,24 +80,41 @@ def ask_ai_question(question, portfolio_data):
                 continue
     return "RATE_LIMIT"
 
-def analyze_portfolio_tiered(report_type, portfolio_data):
+def analyze_portfolio_tiered(report_type, portfolio_dict):
     client = get_ai_client()
     if not client: return "Error: API Key missing."
 
-    compact_data = deduplicate_portfolio(portfolio_data)
+    compact_data = deduplicate_portfolio_by_account(portfolio_dict)
     models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-pro-latest"]
     
+    today_str = datetime.datetime.now().strftime("%B %d, %Y")
+    
     prompt = f"""
+    DATE: {today_str}
+    CURRENCY: PKR
     TASK: {report_type} Institutional Portfolio Review.
-    GOAL: Loss Recovery & Systematic Growth.
-    DATA: {compact_data}
-    REQUIREMENTS: Professional markdown, technical methodology (EMA/RSI context), actionable trade logic.
+    GOAL: Loss Recovery (Primary) & Systematic Growth.
+    
+    DATA (Grouped by Account):
+    {json.dumps(compact_data, indent=2)}
+    
+    REPORT STRUCTURE REQUIREMENTS:
+    1. EXECUTIVE SUMMARY: High-level overview of the total {today_str} status in PKR.
+    2. PERFORMANCE OVERVIEW (PER ACCOUNT):
+       - Create a separate analysis/section for EACH account (e.g., RSL, MMK, SPK, SFEL).
+       - Show performance metrics (Cost, Value, P&L) for each account in PKR.
+       - Use the EXACT CMP provided in the data. Never say "Assumed Price".
+    3. RECOVERY STRATEGY (PER ACCOUNT):
+       - Tailor the strategy for each account. Suggest specific recovery paths (Hold/Average/Switch) based on the specific holdings of that account.
+    4. TECHNICAL INSIGHTS: Apply background technical analysis (EMA/RSI/Pivots methodology) to justify the recovery moves.
+    
+    TONE: Senior Portfolio Strategist (Professional, Precise, Actionable).
+    STRICT: No '$' symbols. No invented dates. No invented prices.
     """
 
     for model_name in models:
-        avail, wait_time = is_model_available(model_name)
+        avail, _ = is_model_available(model_name)
         if not avail: continue
-
         try:
             response = client.models.generate_content(model=model_name, contents=prompt)
             if response.text:

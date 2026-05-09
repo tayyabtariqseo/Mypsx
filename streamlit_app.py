@@ -88,6 +88,17 @@ def parse_portfolio_file(file_path):
 # 3. PAGE LOGIC
 portfolio_files = {"RAFI (RSL)": "RSL.txt", "MMK": "MMK.txt", "SPK": "SPK.txt", "SFEL": "SFEL.txt"}
 
+def get_full_portfolio_data():
+    """Returns data grouped by account for AI consumption."""
+    grouped_data = {}
+    price_map = get_persistent_prices()
+    for label, file in portfolio_files.items():
+        rows = parse_portfolio_file(file)
+        for r in rows:
+            r['CMP'] = price_map.get(r['Symbol'], 0)
+        grouped_data[label] = rows
+    return grouped_data
+
 if page == "Recovery Dashboard":
     st.header("📈 Portfolio Recovery Dashboard")
     mkt_open = is_market_open()
@@ -150,9 +161,9 @@ if page == "Recovery Dashboard":
                 
                 t1, t2, t3 = st.columns(3)
                 if st.session_state.logged_in:
-                    t1.metric("Acc Invested", f"{i:,.0f}")
-                    t2.metric("Acc Value", f"{c:,.0f}")
-                    t3.metric("Acc P/L", f"{c-i:,.0f}", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
+                    t1.metric("Acc Invested (PKR)", f"{i:,.0f}")
+                    t2.metric("Acc Value (PKR)", f"{c:,.0f}")
+                    t3.metric("Acc P/L (PKR)", f"{c-i:,.0f}", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
                 else:
                     t3.metric("Acc P/L%", f"{(c-i)/i*100 if i>0 else 0:.1f}%")
             
@@ -161,9 +172,9 @@ if page == "Recovery Dashboard":
             ti, tc = grand_total_invested, grand_total_current
             s1, s2, s3 = st.columns(3)
             if st.session_state.logged_in:
-                s1.metric("Grand Total Invested", f"{ti:,.0f}")
-                s2.metric("Grand Market Value", f"{tc:,.0f}")
-                s3.metric("Grand Portfolio P/L", f"{tc-ti:,.0f}", f"{(tc-ti)/ti*100 if ti>0 else 0:.1f}%")
+                s1.metric("Grand Total Invested (PKR)", f"{ti:,.0f}")
+                s2.metric("Grand Market Value (PKR)", f"{tc:,.0f}")
+                s3.metric("Grand Portfolio P/L (PKR)", f"{tc-ti:,.0f}", f"{(tc-ti)/ti*100 if ti>0 else 0:.1f}%")
             else:
                 s3.metric("Total Portfolio P/L%", f"{(tc-ti)/ti*100 if ti>0 else 0:.1f}%")
 
@@ -172,13 +183,13 @@ elif page == "Growth Tracker":
     baseline = get_baseline()
     st.info("Tracking growth from May 9, 2026 (Day 0). Baseline is established on this date.")
     
-    all_data = []
+    all_data_flat = []
     for acc, f in portfolio_files.items():
         rows = parse_portfolio_file(f)
-        for r in rows: r['Account'] = acc; all_data.append(r)
+        for r in rows: r['Account'] = acc; all_data_flat.append(r)
     
-    if all_data:
-        df_all = pd.DataFrame(all_data)
+    if all_data_flat:
+        df_all = pd.DataFrame(all_data_flat)
         prices = get_persistent_prices()
         df_all['CMP'] = df_all['Symbol'].map(prices).fillna(0.0)
         df_all['Current'] = df_all['Qty'] * df_all['CMP']
@@ -201,14 +212,14 @@ elif page == "Growth Tracker":
                 perc = (diff / b_val * 100) if b_val > 0 else 0
                 
                 if st.session_state.logged_in:
-                    rows.append({"Account": acc, "Baseline (Day 0)": b_val, "Current Value": c_val, "Growth (%)": perc})
+                    rows.append({"Account": acc, "Baseline (PKR)": b_val, "Current Value (PKR)": c_val, "Growth (%)": perc})
                 else:
                     rows.append({"Account": acc, "Baseline": "***", "Current": "***", "Growth (%)": perc})
 
             df_growth = pd.DataFrame(rows)
             fmt_g = {"Growth (%)": "{:+.2f}%"}
             if st.session_state.logged_in:
-                fmt_g.update({"Baseline (Day 0)": "{:,.0f}", "Current Value": "{:,.0f}"})
+                fmt_g.update({"Baseline (PKR)": "{:,.0f}", "Current Value (PKR)": "{:,.0f}"})
             
             st.table(df_growth.style.format(fmt_g))
             
@@ -218,7 +229,7 @@ elif page == "Growth Tracker":
             
             st.divider()
             if st.session_state.logged_in:
-                st.metric("Consolidated Portfolio Growth", f"{total_c:,.0f}", f"{total_perc:+.2f}%")
+                st.metric("Consolidated Portfolio Growth (PKR)", f"{total_c:,.0f}", f"{total_perc:+.2f}%")
             else:
                 st.metric("Consolidated Portfolio Growth (%)", f"{total_perc:+.2f}%")
 
@@ -241,8 +252,7 @@ elif page == "AI Recovery Strategy":
     if not st.session_state.logged_in:
         st.warning("Login required.")
     else:
-        all_data = []
-        for f in portfolio_files.values(): all_data.extend(parse_portfolio_file(f))
+        grouped_portfolio = get_full_portfolio_data()
         
         # Rate Limit Timer Section
         limits = load_limits()
@@ -258,14 +268,14 @@ elif page == "AI Recovery Strategy":
 
         c1, c2 = st.columns(2)
         if c1.button("Analyze Portfolio"): 
-            with st.spinner("AI Analysis..."):
-                res = analyze_portfolio_tiered("Daily", all_data)
+            with st.spinner("Analyzing Portfolios by Account..."):
+                res = analyze_portfolio_tiered("Daily", grouped_portfolio)
                 if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
                 else: st.session_state.ai_report = res
         
         if c2.button("Weekly Recovery Plan"):
-            with st.spinner("AI Planning..."):
-                res = analyze_portfolio_tiered("Weekly", all_data)
+            with st.spinner("Planning Recovery by Account..."):
+                res = analyze_portfolio_tiered("Weekly", grouped_portfolio)
                 if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
                 else: st.session_state.ai_report = res
         
@@ -276,12 +286,11 @@ elif page == "AI Recovery Strategy":
         q = st.text_input("Ask about Recovery/Growth...")
         if st.button("Ask AI"):
             if q:
-                with st.spinner("Expert Thinking..."):
-                    res = ask_ai_question(q, all_data)
+                with st.spinner("Senior Analyst Thinking..."):
+                    res = ask_ai_question(q, grouped_portfolio)
                     if res == "RATE_LIMIT": st.error("Quota exceeded. Waiting for reset...")
                     else: 
                         st.markdown(res)
-                        # Extract model name for history
                         model_name = res.split('`')[1] if '`' in res else 'Unknown'
                         save_qa_history(q, res.split('\n\n')[1] if '\n\n' in res else res, model_name)
         
